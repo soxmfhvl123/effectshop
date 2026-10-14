@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@theme {
+  /* "Helvetica Now Display" is a commercial Monotype font -- referenced here by
+     name (relying on the user's own system-installed license) rather than
+     embedded/distributed, with metric-compatible fallbacks for machines that
+     don't have it installed. Both tokens point at it: most of the UI's visible
+     type uses font-mono for its "industrial/technical" feel (labels, numeric
+     readouts), so aliasing font-mono too is what actually changes what's on
+     screen, not just the otherwise-unused font-sans body default. */
+  --font-mono: "Helvetica Now Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-sans: "Helvetica Now Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background-color: #09090b;
+  color: #f4f4f5;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+/* thin industrial scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f46 transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: #3f3f46;
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: #3f3f46;
+  border-radius: 2px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  background: #f4f4f5;
+  border: 1px solid #18181b;
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: #3f3f46;
+  border-radius: 2px;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  background: #f4f4f5;
+  border: 1px solid #18181b;
+  cursor: pointer;
+}
