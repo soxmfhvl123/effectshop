@@ -4,6 +4,15 @@
 // only over "foreground"/"object" regions, chroma-key style (same mask
 // logic as Blob Tracker, just per-pixel instead of per-blob). Classic
 // TouchDesigner/creative-coding "points on the subject" look.
+//
+// Each dot gets a thin darkened rim: with "use source color" on, a dot
+// sampled from inside a flat-colored region is otherwise the *exact* same
+// color as what's already under it (mix(pink, pink, alpha) == pink), so it
+// renders completely invisible there — correct by the math, but reads as
+// "the dots aren't showing up" for any image with large flat/smooth areas,
+// which in practice is most images. The rim keeps every dot visible
+// regardless of what's behind it, same as how a real point-cloud marker is
+// never just a flat-filled disc.
 
 export const pointCloudVertexShader = /* glsl */ `
   varying vec2 vUv;
@@ -50,8 +59,13 @@ export const pointCloudFragmentShader = /* glsl */ `
     float d = length(px - samplePx);
     float dotAlpha = smoothstep(radius, radius - 1.5, d) * mask;
 
+    float rimWidth = max(uDotSize * 0.25, 1.0);
+    float rimAlpha = dotAlpha - smoothstep(radius - rimWidth, radius - rimWidth - 1.5, d) * mask;
+
     vec3 dotColor = uUseSourceColor > 0.5 ? sampleColor : uDotColor;
-    vec3 effectColor = mix(srcColor.rgb, dotColor, dotAlpha);
+    vec3 rimColor = dotColor * 0.35;
+    vec3 markerColor = mix(dotColor, rimColor, rimAlpha);
+    vec3 effectColor = mix(srcColor.rgb, markerColor, dotAlpha);
     vec3 outColor = mix(srcColor.rgb, effectColor, uOpacity);
     gl_FragColor = vec4(outColor, srcColor.a);
   }
