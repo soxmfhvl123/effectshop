@@ -120,7 +120,7 @@ button, `accept="image/*,video/*"`):
 
 ## Current scope
 
-The original 6 PRD effects plus 20 more added later — 26 total — are all
+The original 6 PRD effects plus 30 more added later — 36 total — are all
 implemented and enabled, for both images and video:
 
 **Print & Texture**
@@ -135,6 +135,8 @@ implemented and enabled, for both images and video:
 - **Pixelate** (`src/effects/shaders/pixelate.ts`) — hard mosaic blocks
 - **VHS Tracking** (`src/effects/shaders/vhs.ts`) — scanline jitter, tracking band, tape noise
 - **Posterize** (`src/effects/shaders/posterize.ts`) — flat color-band quantization, no dither
+- **NTSC** (`src/effects/shaders/ntsc.ts`) — composite-video chroma bleed, R/B offset, dot-crawl noise
+- **LED Screen** (`src/effects/shaders/ledScreen.ts`) — close-up RGB subpixel grid with darkened cell borders
 
 **Glitch**
 - **RGB Shift** (`src/effects/shaders/rgbShift.ts`)
@@ -147,6 +149,8 @@ implemented and enabled, for both images and video:
 **Lens/Blur**
 - **Tilt-Shift Blur** (`src/effects/shaders/tiltShift.ts`) — sharp band, blurred outside it
 - **Zoom Blur** (`src/effects/shaders/zoomBlur.ts`) — radial motion-blur streaks from a center point
+- **Motion Blur** (`src/effects/shaders/motionBlur.ts`) — linear directional streak at a fixed angle
+- **Radial Blur** (`src/effects/shaders/radialBlur.ts`) — rotational "spin" blur around a center point
 
 **Color/Tone**
 - **Film Grain & Halation** (`src/effects/shaders/filmGrain.ts`) — animated
@@ -154,6 +158,10 @@ implemented and enabled, for both images and video:
   render loop) + a cheap multi-tap halation glow
 - **Duotone** (`src/effects/shaders/duotone.ts`) — luminance -> two-color gradient (heatmap/cyanotype style)
 - **Vintage Fade** (`src/effects/shaders/vintageFade.ts`) — lifted blacks, warm tint, vignette
+- **Monochrome** (`src/effects/shaders/monochrome.ts`) — tinted black & white with a contrast curve
+- **Levels** (`src/effects/shaders/levels.ts`) — classic black-point/white-point/gamma remap
+- **Threshold** (`src/effects/shaders/threshold.ts`) — hard two-level black/white cutoff, distinct
+  from Posterize (multiple bands) and Dither (patterned quantization)
 
 **Generate** — procedural/generative effects, several composite a
 Canvas2D-authored texture on top of the source rather than being pure GLSL
@@ -182,6 +190,15 @@ Canvas2D-authored texture on top of the source rather than being pure GLSL
 - **Voronoi Cells** (`src/effects/shaders/voronoiCells.ts`) — animated cellular/Worley-noise mosaic:
   jittered feature points per grid cell, cell fill sampled from the source image at its nearest
   point, edges drawn via the standard F2-F1 (distance to 2nd-nearest minus nearest point) trick.
+
+**Distort** — new top-level category (`EffectCategory` in `src/types/effect.ts`), all three
+pivoting around a `centerX`/`centerY` point:
+- **Ripple** (`src/effects/shaders/ripple.ts`) — concentric sine waves displacing the sample
+  radially outward from the center
+- **Swirl** (`src/effects/shaders/swirl.ts`) — rotates the sample around the center by an angle
+  that falls off (squared, so it's concentrated near the middle) with distance
+- **Pinch / Bulge** (`src/effects/shaders/pinchBulge.ts`) — remaps sample radius by a power curve
+  within a radius; positive amount bulges outward (fisheye-like), negative pinches inward
 
 Presets (`src/presets/presets.ts`): Riso Zine, Retro CRT, 90s Cyberpunk,
 Gameboy Noir, Thermal Scan, TouchDesigner (Duotone + Point Cloud + Flow Field,

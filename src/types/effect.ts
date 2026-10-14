@@ -22,6 +22,7 @@ export type EffectCategory =
   | 'Lens/Blur'
   | 'Color/Tone'
   | 'Generate'
+  | 'Distort'
 
 export interface Keyframe {
   time: number // seconds, video timeline position

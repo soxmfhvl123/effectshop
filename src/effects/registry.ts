@@ -384,6 +384,128 @@ export const EFFECT_REGISTRY: EffectDefinition[] = [
       { id: 'speed', name: 'Speed', type: 'slider', value: 0.3, min: 0, max: 2, step: 0.05 },
     ],
   },
+  {
+    id: 'motionBlur',
+    name: 'Motion Blur',
+    category: 'Lens/Blur',
+    description: 'Linear directional streak along a fixed angle.',
+    implemented: true,
+    parameters: [
+      { id: 'amount', name: 'Amount', type: 'slider', value: 15, min: 0, max: 60, step: 1 },
+      { id: 'angle', name: 'Angle', type: 'slider', value: 0, min: 0, max: 360, step: 1 },
+    ],
+  },
+  {
+    id: 'radialBlur',
+    name: 'Radial Blur',
+    category: 'Lens/Blur',
+    description: 'Rotational "spin" blur around a center point.',
+    implemented: true,
+    parameters: [
+      { id: 'amount', name: 'Amount', type: 'slider', value: 8, min: 0, max: 30, step: 0.5 },
+      { id: 'centerX', name: 'Center X', type: 'slider', value: 0.5, min: 0, max: 1, step: 0.01 },
+      { id: 'centerY', name: 'Center Y', type: 'slider', value: 0.5, min: 0, max: 1, step: 0.01 },
+    ],
+  },
+  {
+    id: 'monochrome',
+    name: 'Monochrome',
+    category: 'Color/Tone',
+    description: 'Clean black & white with a tint color and contrast curve.',
+    implemented: true,
+    parameters: [
+      { id: 'tint', name: 'Tint', type: 'color', value: '#ffffff' },
+      { id: 'contrast', name: 'Contrast', type: 'slider', value: 1, min: 0.5, max: 2, step: 0.01 },
+    ],
+  },
+  {
+    id: 'levels',
+    name: 'Levels',
+    category: 'Color/Tone',
+    description: 'Black point / white point / gamma remap.',
+    implemented: true,
+    parameters: [
+      { id: 'blackPoint', name: 'Black Point', type: 'slider', value: 0, min: 0, max: 0.9, step: 0.01 },
+      { id: 'whitePoint', name: 'White Point', type: 'slider', value: 1, min: 0.1, max: 1, step: 0.01 },
+      { id: 'gamma', name: 'Gamma', type: 'slider', value: 1, min: 0.2, max: 3, step: 0.01 },
+    ],
+  },
+  {
+    id: 'threshold',
+    name: 'Threshold',
+    category: 'Color/Tone',
+    description: 'Hard two-level black/white cutoff at a luminance level.',
+    implemented: true,
+    parameters: [
+      { id: 'level', name: 'Level', type: 'slider', value: 0.5, min: 0, max: 1, step: 0.01 },
+      { id: 'softness', name: 'Softness', type: 'slider', value: 0.02, min: 0, max: 0.3, step: 0.01 },
+      { id: 'darkColor', name: 'Dark Color', type: 'color', value: '#000000' },
+      { id: 'lightColor', name: 'Light Color', type: 'color', value: '#ffffff' },
+    ],
+  },
+  {
+    id: 'ntsc',
+    name: 'NTSC',
+    category: 'Retro Display',
+    description: 'Composite-video chroma bleed, color offset and dot-crawl noise.',
+    implemented: true,
+    parameters: [
+      { id: 'bleed', name: 'Chroma Bleed', type: 'slider', value: 3, min: 0, max: 10, step: 0.5 },
+      { id: 'colorShift', name: 'Color Shift', type: 'slider', value: 2, min: 0, max: 8, step: 0.5 },
+      { id: 'noise', name: 'Noise', type: 'slider', value: 0.08, min: 0, max: 0.5, step: 0.01 },
+    ],
+  },
+  {
+    id: 'ledScreen',
+    name: 'LED Screen',
+    category: 'Retro Display',
+    description: 'Close-up RGB subpixel grid, like viewing an LED/LCD panel.',
+    implemented: true,
+    parameters: [
+      { id: 'cellSize', name: 'Cell Size', type: 'slider', value: 9, min: 3, max: 30, step: 1 },
+      { id: 'gridDarkness', name: 'Grid Darkness', type: 'slider', value: 0.6, min: 0, max: 1, step: 0.01 },
+    ],
+  },
+  {
+    id: 'ripple',
+    name: 'Ripple',
+    category: 'Distort',
+    description: 'Concentric water-ripple waves from a center point.',
+    implemented: true,
+    parameters: [
+      { id: 'amplitude', name: 'Amplitude', type: 'slider', value: 10, min: 0, max: 40, step: 0.5 },
+      { id: 'frequency', name: 'Frequency', type: 'slider', value: 8, min: 1, max: 30, step: 0.5 },
+      { id: 'speed', name: 'Speed', type: 'slider', value: 2, min: 0, max: 10, step: 0.1 },
+      { id: 'centerX', name: 'Center X', type: 'slider', value: 0.5, min: 0, max: 1, step: 0.01 },
+      { id: 'centerY', name: 'Center Y', type: 'slider', value: 0.5, min: 0, max: 1, step: 0.01 },
+    ],
+  },
+  {
+    id: 'swirl',
+    name: 'Swirl',
+    category: 'Distort',
+    description: 'Whirlpool twist distortion from a center point.',
+    implemented: true,
+    parameters: [
+      { id: 'angle', name: 'Angle', type: 'slider', value: 120, min: -360, max: 360, step: 5 },
+      { id: 'radius', name: 'Radius', type: 'slider', value: 150, min: 20, max: 400, step: 5 },
+      { id: 'centerX', name: 'Center X', type: 'slider', value: 0.5, min: 0, max: 1, step: 0.01 },
+      { id: 'centerY', name: 'Center Y', type: 'slider', value: 0.5, min: 0, max: 1, step: 0.01 },
+    ],
+  },
+  {
+    id: 'pinchBulge',
+    name: 'Pinch / Bulge',
+    category: 'Distort',
+    description: 'Radial lens push (bulge) or pull (pinch) from a center point.',
+    implemented: true,
+    parameters: [
+      { id: 'amount', name: 'Amount', type: 'slider', value: 0.6, min: -0.9, max: 2, step: 0.05 },
+      { id: 'radius', name: 'Radius', type: 'slider', value: 150, min: 20, max: 400, step: 5 },
+      { id: 'centerX', name: 'Center X', type: 'slider', value: 0.5, min: 0, max: 1, step: 0.01 },
+      { id: 'centerY', name: 'Center Y', type: 'slider', value: 0.5, min: 0, max: 1, step: 0.01 },
+    ],
+  },
 ]
 
 export const EFFECT_CATEGORIES = [
@@ -394,6 +516,7 @@ export const EFFECT_CATEGORIES = [
   'Lens/Blur',
   'Color/Tone',
   'Generate',
+  'Distort',
 ] as const
 
 export function getEffectDefinition(effectId: string): EffectDefinition | undefined {

@@ -29,6 +29,16 @@ import { drawTextOverlay } from '../effects/textOverlay'
 import { pointCloudFragmentShader, pointCloudVertexShader } from '../effects/shaders/pointCloud'
 import { flowFieldFragmentShader, flowFieldVertexShader } from '../effects/shaders/flowField'
 import { voronoiCellsFragmentShader, voronoiCellsVertexShader } from '../effects/shaders/voronoiCells'
+import { motionBlurFragmentShader, motionBlurVertexShader } from '../effects/shaders/motionBlur'
+import { radialBlurFragmentShader, radialBlurVertexShader } from '../effects/shaders/radialBlur'
+import { monochromeFragmentShader, monochromeVertexShader } from '../effects/shaders/monochrome'
+import { levelsFragmentShader, levelsVertexShader } from '../effects/shaders/levels'
+import { thresholdFragmentShader, thresholdVertexShader } from '../effects/shaders/threshold'
+import { ntscFragmentShader, ntscVertexShader } from '../effects/shaders/ntsc'
+import { ledScreenFragmentShader, ledScreenVertexShader } from '../effects/shaders/ledScreen'
+import { rippleFragmentShader, rippleVertexShader } from '../effects/shaders/ripple'
+import { swirlFragmentShader, swirlVertexShader } from '../effects/shaders/swirl'
+import { pinchBulgeFragmentShader, pinchBulgeVertexShader } from '../effects/shaders/pinchBulge'
 
 const num = (v: unknown, fallback = 0) => (typeof v === 'number' ? v : Number(v) || fallback)
 
@@ -413,6 +423,137 @@ const PASS_FACTORY: Record<string, () => ShaderPass> = {
       vertexShader: voronoiCellsVertexShader,
       fragmentShader: voronoiCellsFragmentShader,
     }),
+  motionBlur: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uAmount: { value: 15 },
+        uAngle: { value: 0 },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: motionBlurVertexShader,
+      fragmentShader: motionBlurFragmentShader,
+    }),
+  radialBlur: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uAmount: { value: 8 },
+        uCenterX: { value: 0.5 },
+        uCenterY: { value: 0.5 },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: radialBlurVertexShader,
+      fragmentShader: radialBlurFragmentShader,
+    }),
+  monochrome: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uTint: { value: new THREE.Color('#ffffff') },
+        uContrast: { value: 1 },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: monochromeVertexShader,
+      fragmentShader: monochromeFragmentShader,
+    }),
+  levels: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uBlackPoint: { value: 0 },
+        uWhitePoint: { value: 1 },
+        uGamma: { value: 1 },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: levelsVertexShader,
+      fragmentShader: levelsFragmentShader,
+    }),
+  threshold: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uLevel: { value: 0.5 },
+        uSoftness: { value: 0.02 },
+        uDarkColor: { value: new THREE.Color('#000000') },
+        uLightColor: { value: new THREE.Color('#ffffff') },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: thresholdVertexShader,
+      fragmentShader: thresholdFragmentShader,
+    }),
+  ntsc: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uTime: { value: 0 },
+        uBleed: { value: 3 },
+        uColorShift: { value: 2 },
+        uNoise: { value: 0.08 },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: ntscVertexShader,
+      fragmentShader: ntscFragmentShader,
+    }),
+  ledScreen: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uCellSize: { value: 9 },
+        uGridDarkness: { value: 0.6 },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: ledScreenVertexShader,
+      fragmentShader: ledScreenFragmentShader,
+    }),
+  ripple: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uTime: { value: 0 },
+        uAmplitude: { value: 10 },
+        uFrequency: { value: 8 },
+        uSpeed: { value: 2 },
+        uCenterX: { value: 0.5 },
+        uCenterY: { value: 0.5 },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: rippleVertexShader,
+      fragmentShader: rippleFragmentShader,
+    }),
+  swirl: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uAngle: { value: 120 },
+        uRadius: { value: 150 },
+        uCenterX: { value: 0.5 },
+        uCenterY: { value: 0.5 },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: swirlVertexShader,
+      fragmentShader: swirlFragmentShader,
+    }),
+  pinchBulge: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uAmount: { value: 0.6 },
+        uRadius: { value: 150 },
+        uCenterX: { value: 0.5 },
+        uCenterY: { value: 0.5 },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: pinchBulgeVertexShader,
+      fragmentShader: pinchBulgeFragmentShader,
+    }),
 }
 
 export function isEffectRenderable(effectId: string): boolean {
@@ -592,6 +733,58 @@ export function updatePassUniforms(pass: ShaderPass, effect: AppliedEffect, reso
       u.uEdgeColor.value = hexToRgb(effect.parameters.edgeColor, u.uEdgeColor.value)
       u.uFillAmount.value = num(effect.parameters.fillAmount, 0.6)
       u.uSpeed.value = num(effect.parameters.speed, 0.3)
+      break
+    case 'motionBlur':
+      u.uAmount.value = num(effect.parameters.amount, 15)
+      u.uAngle.value = num(effect.parameters.angle, 0)
+      break
+    case 'radialBlur':
+      u.uAmount.value = num(effect.parameters.amount, 8)
+      u.uCenterX.value = num(effect.parameters.centerX, 0.5)
+      u.uCenterY.value = num(effect.parameters.centerY, 0.5)
+      break
+    case 'monochrome':
+      u.uTint.value = hexToRgb(effect.parameters.tint, u.uTint.value)
+      u.uContrast.value = num(effect.parameters.contrast, 1)
+      break
+    case 'levels':
+      u.uBlackPoint.value = num(effect.parameters.blackPoint, 0)
+      u.uWhitePoint.value = num(effect.parameters.whitePoint, 1)
+      u.uGamma.value = num(effect.parameters.gamma, 1)
+      break
+    case 'threshold':
+      u.uLevel.value = num(effect.parameters.level, 0.5)
+      u.uSoftness.value = num(effect.parameters.softness, 0.02)
+      u.uDarkColor.value = hexToRgb(effect.parameters.darkColor, u.uDarkColor.value)
+      u.uLightColor.value = hexToRgb(effect.parameters.lightColor, u.uLightColor.value)
+      break
+    case 'ntsc':
+      u.uBleed.value = num(effect.parameters.bleed, 3)
+      u.uColorShift.value = num(effect.parameters.colorShift, 2)
+      u.uNoise.value = num(effect.parameters.noise, 0.08)
+      break
+    case 'ledScreen':
+      u.uCellSize.value = num(effect.parameters.cellSize, 9)
+      u.uGridDarkness.value = num(effect.parameters.gridDarkness, 0.6)
+      break
+    case 'ripple':
+      u.uAmplitude.value = num(effect.parameters.amplitude, 10)
+      u.uFrequency.value = num(effect.parameters.frequency, 8)
+      u.uSpeed.value = num(effect.parameters.speed, 2)
+      u.uCenterX.value = num(effect.parameters.centerX, 0.5)
+      u.uCenterY.value = num(effect.parameters.centerY, 0.5)
+      break
+    case 'swirl':
+      u.uAngle.value = num(effect.parameters.angle, 120)
+      u.uRadius.value = num(effect.parameters.radius, 150)
+      u.uCenterX.value = num(effect.parameters.centerX, 0.5)
+      u.uCenterY.value = num(effect.parameters.centerY, 0.5)
+      break
+    case 'pinchBulge':
+      u.uAmount.value = num(effect.parameters.amount, 0.6)
+      u.uRadius.value = num(effect.parameters.radius, 150)
+      u.uCenterX.value = num(effect.parameters.centerX, 0.5)
+      u.uCenterY.value = num(effect.parameters.centerY, 0.5)
       break
   }
 }
