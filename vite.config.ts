@@ -3,9 +3,9 @@ import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  // GitHub Pages serves this repo at /effectshop/, not the domain root, so
-  // built asset URLs need that prefix baked in — otherwise the deployed
-  // index.html requests /assets/... (404) instead of /effectshop/assets/....
-  base: '/effectshop/',
+  // Served from the custom domain's root (effectshop.shop — see public/CNAME),
+  // not a /effectshop/ subpath, now that a custom domain is set up. GitHub
+  // Pages serves a custom domain at its root regardless of the repo name.
+  base: '/',
   plugins: [react(), tailwindcss()],
 })
