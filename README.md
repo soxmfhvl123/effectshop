@@ -120,7 +120,7 @@ button, `accept="image/*,video/*"`):
 
 ## Current scope
 
-The original 6 PRD effects plus 17 more added later — 23 total — are all
+The original 6 PRD effects plus 20 more added later — 26 total — are all
 implemented and enabled, for both images and video:
 
 **Print & Texture**
@@ -172,9 +172,21 @@ Canvas2D-authored texture on top of the source rather than being pure GLSL
   the same overlay-texture pipeline as Text. Good enough to read as "live tracking" without an ML
   dependency; see `threshold`/`keyColor` params to tune per-image, same as the reference UI this
   was modeled on.
+- **Point Cloud** (`src/effects/shaders/pointCloud.ts`) — scatters jittered dots over a grid, but
+  only where that cell's sampled color is far enough from a chosen key color, i.e. only over
+  "foreground"/object regions — same chroma-key mask idea as Blob Tracker, done per-pixel in pure
+  GLSL instead of per-blob on the CPU, so it's a single shader pass with no canvas readback.
+- **Flow Field** (`src/effects/shaders/flowField.ts`) — a grid of tick marks angled by a drifting
+  value-noise field (classic TouchDesigner/creative-coding look); tick length also scales with the
+  source image's local luminance so it visibly reads the picture, not just the noise.
+- **Voronoi Cells** (`src/effects/shaders/voronoiCells.ts`) — animated cellular/Worley-noise mosaic:
+  jittered feature points per grid cell, cell fill sampled from the source image at its nearest
+  point, edges drawn via the standard F2-F1 (distance to 2nd-nearest minus nearest point) trick.
 
 Presets (`src/presets/presets.ts`): Riso Zine, Retro CRT, 90s Cyberpunk,
-Gameboy Noir, Thermal Scan — all live.
+Gameboy Noir, Thermal Scan, TouchDesigner (Duotone + Point Cloud + Flow Field,
+tuned so Point Cloud's key color matches Duotone's shadow color — the object
+mask still reads correctly after the duotone remap) — all live.
 
 To add a new effect: write the shader in `src/effects/shaders/`, register a
 `ShaderPass` factory + uniform updater for it in `src/engine/passes.ts`, and

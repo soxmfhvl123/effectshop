@@ -26,6 +26,9 @@ import { paperCutoutFragmentShader, paperCutoutVertexShader } from '../effects/s
 import { overlayBlendFragmentShader, overlayBlendVertexShader } from '../effects/shaders/overlayBlend'
 import { getOverlayCanvas } from '../effects/overlayCanvas'
 import { drawTextOverlay } from '../effects/textOverlay'
+import { pointCloudFragmentShader, pointCloudVertexShader } from '../effects/shaders/pointCloud'
+import { flowFieldFragmentShader, flowFieldVertexShader } from '../effects/shaders/flowField'
+import { voronoiCellsFragmentShader, voronoiCellsVertexShader } from '../effects/shaders/voronoiCells'
 
 const num = (v: unknown, fallback = 0) => (typeof v === 'number' ? v : Number(v) || fallback)
 
@@ -359,6 +362,57 @@ const PASS_FACTORY: Record<string, () => ShaderPass> = {
       vertexShader: overlayBlendVertexShader,
       fragmentShader: overlayBlendFragmentShader,
     }),
+  pointCloud: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uKeyColor: { value: new THREE.Color('#000000') },
+        uThreshold: { value: 0.3 },
+        uSpacing: { value: 14 },
+        uDotSize: { value: 5 },
+        uJitter: { value: 0.4 },
+        uUseSourceColor: { value: 1 },
+        uDotColor: { value: new THREE.Color('#00ffc8') },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: pointCloudVertexShader,
+      fragmentShader: pointCloudFragmentShader,
+    }),
+  flowField: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uTime: { value: 0 },
+        uSpacing: { value: 16 },
+        uLineLength: { value: 10 },
+        uThickness: { value: 1.2 },
+        uNoiseScale: { value: 0.08 },
+        uSpeed: { value: 0.5 },
+        uLuminanceReactive: { value: 1 },
+        uLineColor: { value: new THREE.Color('#ffffff') },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: flowFieldVertexShader,
+      fragmentShader: flowFieldFragmentShader,
+    }),
+  voronoiCells: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uTime: { value: 0 },
+        uScale: { value: 40 },
+        uEdgeThickness: { value: 1.5 },
+        uEdgeColor: { value: new THREE.Color('#0a0a0a') },
+        uFillAmount: { value: 0.6 },
+        uSpeed: { value: 0.3 },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: voronoiCellsVertexShader,
+      fragmentShader: voronoiCellsFragmentShader,
+    }),
 }
 
 export function isEffectRenderable(effectId: string): boolean {
@@ -514,6 +568,31 @@ export function updatePassUniforms(pass: ShaderPass, effect: AppliedEffect, reso
     // 'blobTracker' has no static uniforms to push here — its tOverlay is
     // populated by updateBlobTrackerOverlay, called from EffectRenderer
     // where the source media is available.
+    case 'pointCloud':
+      u.uKeyColor.value = hexToRgb(effect.parameters.keyColor, u.uKeyColor.value)
+      u.uThreshold.value = num(effect.parameters.threshold, 0.3)
+      u.uSpacing.value = num(effect.parameters.spacing, 14)
+      u.uDotSize.value = num(effect.parameters.dotSize, 5)
+      u.uJitter.value = num(effect.parameters.jitter, 0.4)
+      u.uUseSourceColor.value = effect.parameters.useSourceColor === false ? 0 : 1
+      u.uDotColor.value = hexToRgb(effect.parameters.dotColor, u.uDotColor.value)
+      break
+    case 'flowField':
+      u.uSpacing.value = num(effect.parameters.spacing, 16)
+      u.uLineLength.value = num(effect.parameters.lineLength, 10)
+      u.uThickness.value = num(effect.parameters.thickness, 1.2)
+      u.uNoiseScale.value = num(effect.parameters.noiseScale, 0.08)
+      u.uSpeed.value = num(effect.parameters.speed, 0.5)
+      u.uLuminanceReactive.value = effect.parameters.luminanceReactive === false ? 0 : 1
+      u.uLineColor.value = hexToRgb(effect.parameters.lineColor, u.uLineColor.value)
+      break
+    case 'voronoiCells':
+      u.uScale.value = num(effect.parameters.scale, 40)
+      u.uEdgeThickness.value = num(effect.parameters.edgeThickness, 1.5)
+      u.uEdgeColor.value = hexToRgb(effect.parameters.edgeColor, u.uEdgeColor.value)
+      u.uFillAmount.value = num(effect.parameters.fillAmount, 0.6)
+      u.uSpeed.value = num(effect.parameters.speed, 0.3)
+      break
   }
 }
 

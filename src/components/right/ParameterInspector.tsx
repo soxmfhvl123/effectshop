@@ -110,7 +110,7 @@ export function ParameterInspector() {
   const def = effect ? getEffectDefinition(effect.effectId) : undefined
 
   return (
-    <div className="flex h-64 shrink-0 flex-col border-t border-zinc-800">
+    <div className="flex min-h-0 flex-1 flex-col border-t border-zinc-800">
       <p className="shrink-0 px-3 pt-2.5 font-mono text-xs uppercase tracking-widest text-zinc-600">
         Parameters{def ? ` · ${def.name}` : ''}
       </p>

@@ -338,6 +338,52 @@ export const EFFECT_REGISTRY: EffectDefinition[] = [
       { id: 'showLines', name: 'Show Lines', type: 'toggle', value: true },
     ],
   },
+  {
+    id: 'pointCloud',
+    name: 'Point Cloud',
+    category: 'Generate',
+    description: 'Scatters dots over regions far from a key color — points on the subject.',
+    implemented: true,
+    parameters: [
+      { id: 'keyColor', name: 'Key Color', type: 'color', value: '#000000' },
+      { id: 'threshold', name: 'Threshold', type: 'slider', value: 0.3, min: 0.02, max: 1, step: 0.01 },
+      { id: 'spacing', name: 'Spacing', type: 'slider', value: 14, min: 4, max: 40, step: 1 },
+      { id: 'dotSize', name: 'Dot Size', type: 'slider', value: 5, min: 1, max: 20, step: 0.5 },
+      { id: 'jitter', name: 'Jitter', type: 'slider', value: 0.4, min: 0, max: 1, step: 0.01 },
+      { id: 'useSourceColor', name: 'Use Source Color', type: 'toggle', value: true },
+      { id: 'dotColor', name: 'Dot Color', type: 'color', value: '#00ffc8' },
+    ],
+  },
+  {
+    id: 'flowField',
+    name: 'Flow Field',
+    category: 'Generate',
+    description: 'Grid of tick marks angled by a drifting noise field.',
+    implemented: true,
+    parameters: [
+      { id: 'spacing', name: 'Spacing', type: 'slider', value: 16, min: 6, max: 40, step: 1 },
+      { id: 'lineLength', name: 'Line Length', type: 'slider', value: 10, min: 2, max: 30, step: 0.5 },
+      { id: 'thickness', name: 'Thickness', type: 'slider', value: 1.2, min: 0.5, max: 3, step: 0.1 },
+      { id: 'noiseScale', name: 'Noise Scale', type: 'slider', value: 0.08, min: 0.01, max: 0.5, step: 0.01 },
+      { id: 'speed', name: 'Speed', type: 'slider', value: 0.5, min: 0, max: 3, step: 0.05 },
+      { id: 'luminanceReactive', name: 'Luminance Reactive', type: 'toggle', value: true },
+      { id: 'lineColor', name: 'Line Color', type: 'color', value: '#ffffff' },
+    ],
+  },
+  {
+    id: 'voronoiCells',
+    name: 'Voronoi Cells',
+    category: 'Generate',
+    description: 'Animated cellular mosaic with drifting feature points.',
+    implemented: true,
+    parameters: [
+      { id: 'scale', name: 'Cell Scale', type: 'slider', value: 40, min: 10, max: 80, step: 1 },
+      { id: 'edgeThickness', name: 'Edge Thickness', type: 'slider', value: 1.5, min: 0.5, max: 5, step: 0.1 },
+      { id: 'edgeColor', name: 'Edge Color', type: 'color', value: '#0a0a0a' },
+      { id: 'fillAmount', name: 'Fill Amount', type: 'slider', value: 0.6, min: 0, max: 1, step: 0.01 },
+      { id: 'speed', name: 'Speed', type: 'slider', value: 0.3, min: 0, max: 2, step: 0.05 },
+    ],
+  },
 ]
 
 export const EFFECT_CATEGORIES = [

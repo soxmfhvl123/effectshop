@@ -19,7 +19,7 @@ export function ActivePipeline() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-2.5">
+    <div className="max-h-64 shrink-0 overflow-y-auto p-2.5">
       <p className="mb-2 px-0.5 font-mono text-xs uppercase tracking-widest text-zinc-600">
         Active Pipeline · {activeEffects.length}
       </p>
