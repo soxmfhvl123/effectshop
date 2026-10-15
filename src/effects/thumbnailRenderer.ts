@@ -6,6 +6,9 @@ import type { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js
 import { createPass, updatePassUniforms } from '../engine/passes'
 import { updateBlobTrackerOverlay } from './blobTrackerOverlay'
 import { updateMotionGlowOverlay } from './motionGlowOverlay'
+import { updateMetaballTracking } from './metaballTracking'
+import { updateFireflySwarmOverlay } from './fireflySwarmOverlay'
+import { updateEchoTrailOverlay } from './echoTrailOverlay'
 import { getEffectDefinition } from './registry'
 import { getDemoCanvas } from './thumbnailDemo'
 import type { AppliedEffect, Preset } from '../types/effect'
@@ -85,6 +88,19 @@ function renderThumbnail(cacheKey: string, cache: Map<string, string>, effects: 
     // zero-size placeholder, so the thumbnail renders without erroring.
     if (effect.effectId === 'motionGlow') {
       updateMotionGlowOverlay(pass, effect, getDemoCanvas(), resolution)
+    }
+    // Liquid Metal, Firefly Swarm and Echo Trail all need one real
+    // detection/draw pass against the demo canvas too, for the same reason
+    // as Motion Glow above -- without it their arrays/textures would stay
+    // at factory defaults (no blobs, blank overlay).
+    if (effect.effectId === 'liquidMetal') {
+      updateMetaballTracking(pass, effect, getDemoCanvas(), resolution)
+    }
+    if (effect.effectId === 'fireflySwarm') {
+      updateFireflySwarmOverlay(pass, effect, getDemoCanvas(), resolution)
+    }
+    if (effect.effectId === 'echoTrail') {
+      updateEchoTrailOverlay(pass, effect, getDemoCanvas(), resolution)
     }
     createdPasses.push(pass)
   }

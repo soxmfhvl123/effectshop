@@ -41,6 +41,8 @@ import { swirlFragmentShader, swirlVertexShader } from '../effects/shaders/swirl
 import { pinchBulgeFragmentShader, pinchBulgeVertexShader } from '../effects/shaders/pinchBulge'
 import { objectGlowFragmentShader, objectGlowVertexShader } from '../effects/shaders/objectGlow'
 import { colorIsolationFragmentShader, colorIsolationVertexShader } from '../effects/shaders/colorIsolation'
+import { magneticFieldFragmentShader, magneticFieldVertexShader } from '../effects/shaders/magneticField'
+import { liquidMetalFragmentShader, liquidMetalVertexShader, MAX_METABALLS } from '../effects/shaders/liquidMetal'
 
 const num = (v: unknown, fallback = 0) => (typeof v === 'number' ? v : Number(v) || fallback)
 
@@ -617,6 +619,74 @@ const PASS_FACTORY: Record<string, () => ShaderPass> = {
       vertexShader: swirlVertexShader,
       fragmentShader: swirlFragmentShader,
     }),
+  magneticField: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uTime: { value: 0 },
+        uKeyColor: { value: new THREE.Color('#000000') },
+        uThreshold: { value: 0.3 },
+        uSpacing: { value: 14 },
+        uLineLength: { value: 11 },
+        uThickness: { value: 1.4 },
+        uFalloff: { value: 60 },
+        uFlowSpeed: { value: 0.6 },
+        uFieldColor: { value: new THREE.Color('#9be8ff') },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: magneticFieldVertexShader,
+      fragmentShader: magneticFieldFragmentShader,
+    }),
+  // Liquid Metal's uBalls array is pushed by updateMetaballTracking
+  // (metaballTracking.ts) from EffectRenderer -- not touched here beyond
+  // the zeroed default (all radius 0 = no contribution, nothing merges
+  // until real blobs are detected).
+  liquidMetal: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uTime: { value: 0 },
+        uBalls: { value: Array.from({ length: MAX_METABALLS }, () => new THREE.Vector3(0, 0, 0)) },
+        uMergeThreshold: { value: 1 },
+        uRefraction: { value: 18 },
+        uRimIntensity: { value: 0.5 },
+        uLiquidColor: { value: new THREE.Color('#7fd8ff') },
+        uTint: { value: 0.35 },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: liquidMetalVertexShader,
+      fragmentShader: liquidMetalFragmentShader,
+    }),
+  // Firefly Swarm's particles are drawn by updateFireflySwarmOverlay
+  // (fireflySwarmOverlay.ts) from EffectRenderer every frame (the particle
+  // simulation itself isn't throttled, only its internal object detection
+  // is) -- same overlay-blend pattern as Blob Tracker/Motion Glow.
+  fireflySwarm: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        tOverlay: { value: new THREE.Texture() },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: overlayBlendVertexShader,
+      fragmentShader: overlayBlendFragmentShader,
+    }),
+  // Echo Trail's accumulation canvas is maintained by updateEchoTrailOverlay
+  // (echoTrailOverlay.ts) from EffectRenderer every frame -- it's the one
+  // overlay effect whose canvas persists and fades instead of being cleared
+  // and redrawn each tick, which is what produces the long-exposure look.
+  echoTrail: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        tOverlay: { value: new THREE.Texture() },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: overlayBlendVertexShader,
+      fragmentShader: overlayBlendFragmentShader,
+    }),
 }
 
 export function isEffectRenderable(effectId: string): boolean {
@@ -875,6 +945,30 @@ export function updatePassUniforms(pass: ShaderPass, effect: AppliedEffect, reso
       u.uAngle.value = num(effect.parameters.angle, 150)
       u.uRadius.value = num(effect.parameters.radius, 160)
       break
+    case 'magneticField':
+      u.uKeyColor.value = hexToRgb(effect.parameters.keyColor, u.uKeyColor.value)
+      u.uThreshold.value = num(effect.parameters.threshold, 0.3)
+      u.uSpacing.value = num(effect.parameters.spacing, 14)
+      u.uLineLength.value = num(effect.parameters.lineLength, 11)
+      u.uThickness.value = num(effect.parameters.thickness, 1.4)
+      u.uFalloff.value = num(effect.parameters.falloff, 60)
+      u.uFlowSpeed.value = num(effect.parameters.flowSpeed, 0.6)
+      u.uFieldColor.value = hexToRgb(effect.parameters.fieldColor, u.uFieldColor.value)
+      break
+    // 'liquidMetal' leaves uBalls untouched here -- it's driven by
+    // updateMetaballTracking from EffectRenderer. Its other params still
+    // come through this normal path.
+    case 'liquidMetal':
+      u.uMergeThreshold.value = num(effect.parameters.mergeThreshold, 1)
+      u.uRefraction.value = num(effect.parameters.refraction, 18)
+      u.uRimIntensity.value = num(effect.parameters.rimIntensity, 0.5)
+      u.uLiquidColor.value = hexToRgb(effect.parameters.liquidColor, u.uLiquidColor.value)
+      u.uTint.value = num(effect.parameters.tint, 0.35)
+      break
+    // 'fireflySwarm' and 'echoTrail' have no static uniforms to push here
+    // -- their tOverlay textures are populated by updateFireflySwarmOverlay
+    // / updateEchoTrailOverlay, called from EffectRenderer where the
+    // source media is available.
   }
 }
 

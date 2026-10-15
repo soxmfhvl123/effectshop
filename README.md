@@ -203,6 +203,31 @@ Canvas2D-authored texture on top of the source rather than being pure GLSL
   against the previous one), with a JS-side particle trail that spawns at each detected motion
   region and fades out over `Trail Duration` rather than a GPU feedback buffer. **Video only**: a
   still image has no second frame to diff against, so it's a no-op there by design, not a bug.
+- **Magnetic Field** (`src/effects/shaders/magneticField.ts`) — iron-filing-style flux lines that
+  curve around the detected object instead of pointing at it: each grid cell samples the chroma-key
+  mask at a ring of offsets to get a "which direction, how close" vector, then draws its tick along
+  that vector's *perpendicular* (the standard "flow around an obstacle" trick) with a scrolling dash
+  pattern for a sense of flow. Pure GLSL, no CPU detection beyond the mask itself.
+- **Liquid Metal** (`src/effects/shaders/liquidMetal.ts` + `src/effects/metaballTracking.ts`) —
+  every detected blob becomes a classic 2D metaball (implicit field `radius²/distance²` summed
+  across up to 8 blobs via a fixed-size `uBalls` array uniform); wherever the summed field crosses
+  `Merge Threshold`, two nearby objects visually fuse into one molten shape with no special-casing
+  needed — that's just what the metaball math does. Inside the merged field the source image is
+  refracted (sampled with an offset along the field's screen-space gradient) and tinted, with a
+  bright rim right at the boundary.
+- **Firefly Swarm** (`src/effects/fireflySwarmOverlay.ts`) — a persistent population of glowing
+  particles, each on its own randomized orbit radius/speed/phase, that continuously circles the
+  detected object. Unlike every other detection-driven effect, its per-frame simulate+draw call
+  isn't gated by the shared blob-update throttle (particle motion needs to stay smooth every
+  frame); only its own internal "where's the object" detection throttles itself, on the same
+  150ms cadence. Trails come from fading the overlay canvas via a `destination-out` alpha
+  multiply instead of clearing it — see "Overlay-texture effects" below.
+- **Echo Trail** (`src/effects/echoTrailOverlay.ts`) — a true accumulation buffer: the object's
+  actual per-pixel masked silhouette (soft-edged via a key-color-distance gradient, not a blob
+  bounding box) is painted into a persistent canvas every frame, which is faded instead of cleared
+  — the first overlay effect in the codebase where content survives across ticks, which is what
+  produces the long-exposure light-painting look rather than a flat silhouette. Driven every frame
+  for smooth decay, same as Firefly Swarm.
 
 **Distort** — all pivot around a `centerX`/`centerY` point (`EffectCategory` in `src/types/effect.ts`):
 - **Ripple** (`src/effects/shaders/ripple.ts`) — concentric sine waves displacing the sample
@@ -228,29 +253,41 @@ add its entry (with `implemented: true`) to `src/effects/registry.ts`.
 
 ### Overlay-texture effects
 
-Text, Blob Tracker and Motion Glow don't fit the "uniforms in, pixels out"
-shape every other effect uses — text layout and HUD-style drawing are far
-easier with the Canvas2D API than GLSL. All three instead draw into a
-per-pass offscreen canvas (`src/effects/overlayCanvas.ts`, keyed by
-`WeakMap<ShaderPass, ...>` so each effect instance gets its own) and
-composite that canvas as a texture with a trivial shared alpha-blend shader
-(`overlayBlend.ts`). Text's canvas is redrawn synchronously whenever its
-parameters change (cheap). Blob Tracker's and Motion Glow's need the actual
-source pixels, which `updatePassUniforms` doesn't have access to, so both are
-driven separately from `EffectRenderer.tsx`: once immediately when the effect
-is added or the media changes, and then on a 150ms throttle during playback
-(`BLOB_TRACKER_UPDATE_INTERVAL`, shared by both) rather than every frame — a
-full-resolution canvas redraw + pixel readback 60 times a second would be
-wasted work for effects that only need to look live, not actually track in
-real time. Motion Glow additionally keeps a small JS-side array of
-fading trail particles (`motionGlowOverlay.ts`) rather than a GPU
-ping-pong buffer, redrawing all of them into the overlay canvas each tick.
+Text, Blob Tracker, Motion Glow, Firefly Swarm and Echo Trail don't fit the
+"uniforms in, pixels out" shape every other effect uses — text layout and
+HUD/particle/trail drawing are far easier with the Canvas2D API than GLSL.
+All five instead draw into a per-pass offscreen canvas
+(`src/effects/overlayCanvas.ts`, keyed by `WeakMap<ShaderPass, ...>` so each
+effect instance gets its own) and composite that canvas as a texture with a
+trivial shared alpha-blend shader (`overlayBlend.ts`). Text's canvas is
+redrawn synchronously whenever its parameters change (cheap). The other four
+need the actual source pixels, which `updatePassUniforms` doesn't have
+access to, so they're driven separately from `EffectRenderer.tsx`:
+- **Blob Tracker** and **Motion Glow** update once immediately when the
+  effect is added or the media changes, then on a 150ms throttle during
+  playback (`BLOB_TRACKER_UPDATE_INTERVAL`, shared by both) rather than
+  every frame — a full-resolution canvas redraw + pixel readback 60 times a
+  second would be wasted work for effects that only need to look live, not
+  actually track in real time. Motion Glow keeps a small JS-side array of
+  fading trail particles (`motionGlowOverlay.ts`) rather than a GPU
+  ping-pong buffer, redrawing all of them into the overlay canvas each tick.
+- **Firefly Swarm** and **Echo Trail** update every single frame instead,
+  since particle motion and trail decay both need to stay smooth — each
+  throttles its own internal object detection separately (same 150ms
+  cadence) rather than sharing `BLOB_TRACKER_UPDATE_INTERVAL`. Echo Trail in
+  particular is the one overlay effect whose canvas is *faded* (a
+  `destination-out` alpha multiply) instead of cleared and redrawn each
+  tick — that's what turns a per-frame silhouette into a persistent,
+  decaying accumulation buffer, i.e. a real feedback-loop trail rather than
+  a JS-managed particle pool. Firefly Swarm uses the same fade trick for its
+  particles' comet tails.
 
-Object Warp (`objectWarpTracking.ts`) follows the same "needs source pixels,
-driven from EffectRenderer on the same throttle" pattern, but isn't an
-overlay-texture effect — it reuses the normal Swirl shader pass and just
-pushes two numeric uniforms (`uCenterX`/`uCenterY`) directly instead of
-drawing anything.
+Object Warp (`objectWarpTracking.ts`) and Liquid Metal
+(`metaballTracking.ts`) follow the same "needs source pixels, driven from
+EffectRenderer on the shared throttle" pattern, but aren't overlay-texture
+effects — they reuse a normal GLSL pass and just push numeric/array uniforms
+(`uCenterX`/`uCenterY`, or the `uBalls` metaball array) directly instead of
+drawing anything to a canvas.
 
 ## Assumptions & notable implementation choices
 

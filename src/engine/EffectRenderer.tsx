@@ -12,6 +12,9 @@ import { evaluateEffectAtTime } from '../lib/keyframes'
 import { updateBlobTrackerOverlay } from '../effects/blobTrackerOverlay'
 import { updateMotionGlowOverlay } from '../effects/motionGlowOverlay'
 import { updateObjectWarpTracking } from '../effects/objectWarpTracking'
+import { updateMetaballTracking } from '../effects/metaballTracking'
+import { updateFireflySwarmOverlay } from '../effects/fireflySwarmOverlay'
+import { updateEchoTrailOverlay } from '../effects/echoTrailOverlay'
 import type { AppliedEffect } from '../types/effect'
 
 const BLOB_TRACKER_UPDATE_INTERVAL = 0.15 // seconds between live re-detections during video playback
@@ -299,6 +302,19 @@ export const EffectRenderer = forwardRef<EffectRendererHandle, Props>(function E
         if (effect.effectId === 'objectWarp' && dueForBlobUpdate && mediaSource) {
           updateObjectWarpTracking(pass, evaluatedEffect, mediaSource)
         }
+        if (effect.effectId === 'liquidMetal' && dueForBlobUpdate && mediaSource) {
+          updateMetaballTracking(pass, evaluatedEffect, mediaSource, resolutionRef.current)
+        }
+        // Firefly Swarm and Echo Trail simulate/decay every frame (not
+        // gated by dueForBlobUpdate) so particle motion and trail fade stay
+        // smooth -- each throttles its own underlying object detection
+        // internally instead.
+        if (effect.effectId === 'fireflySwarm' && mediaSource) {
+          updateFireflySwarmOverlay(pass, evaluatedEffect, mediaSource, resolutionRef.current)
+        }
+        if (effect.effectId === 'echoTrail' && mediaSource) {
+          updateEchoTrailOverlay(pass, evaluatedEffect, mediaSource, resolutionRef.current)
+        }
       })
       composer.render()
       const nowAfterRender = performance.now()
@@ -448,6 +464,27 @@ export const EffectRenderer = forwardRef<EffectRendererHandle, Props>(function E
         if (source) {
           const evaluatedEffect = effect.keyframes ? evaluateEffectAtTime(effect, currentTime) : effect
           updateObjectWarpTracking(pass, evaluatedEffect, source)
+        }
+      }
+      if (effect.effectId === 'liquidMetal') {
+        const source = sourceVideo ?? sourceImage
+        if (source) {
+          const evaluatedEffect = effect.keyframes ? evaluateEffectAtTime(effect, currentTime) : effect
+          updateMetaballTracking(pass, evaluatedEffect, source, resolution)
+        }
+      }
+      if (effect.effectId === 'fireflySwarm') {
+        const source = sourceVideo ?? sourceImage
+        if (source) {
+          const evaluatedEffect = effect.keyframes ? evaluateEffectAtTime(effect, currentTime) : effect
+          updateFireflySwarmOverlay(pass, evaluatedEffect, source, resolution)
+        }
+      }
+      if (effect.effectId === 'echoTrail') {
+        const source = sourceVideo ?? sourceImage
+        if (source) {
+          const evaluatedEffect = effect.keyframes ? evaluateEffectAtTime(effect, currentTime) : effect
+          updateEchoTrailOverlay(pass, evaluatedEffect, source, resolution)
         }
       }
       orderedPasses.push(pass)
