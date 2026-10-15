@@ -10,6 +10,8 @@ import { loadImageFromFile, loadVideoFromFile, isImageFile, isVideoFile } from '
 import { downloadBlob } from '../lib/download'
 import { evaluateEffectAtTime } from '../lib/keyframes'
 import { updateBlobTrackerOverlay } from '../effects/blobTrackerOverlay'
+import { updateMotionGlowOverlay } from '../effects/motionGlowOverlay'
+import { updateObjectWarpTracking } from '../effects/objectWarpTracking'
 import type { AppliedEffect } from '../types/effect'
 
 const BLOB_TRACKER_UPDATE_INTERVAL = 0.15 // seconds between live re-detections during video playback
@@ -288,6 +290,15 @@ export const EffectRenderer = forwardRef<EffectRendererHandle, Props>(function E
         if (effect.effectId === 'blobTracker' && dueForBlobUpdate && mediaSource) {
           updateBlobTrackerOverlay(pass, evaluatedEffect, mediaSource, resolutionRef.current)
         }
+        // Motion Glow needs genuine frame-to-frame difference, so it only
+        // makes sense against the real <video> element — a still image has
+        // no second frame to diff against, so skip it there entirely.
+        if (effect.effectId === 'motionGlow' && dueForBlobUpdate && sourceVideoRef.current) {
+          updateMotionGlowOverlay(pass, evaluatedEffect, sourceVideoRef.current, resolutionRef.current)
+        }
+        if (effect.effectId === 'objectWarp' && dueForBlobUpdate && mediaSource) {
+          updateObjectWarpTracking(pass, evaluatedEffect, mediaSource)
+        }
       })
       composer.render()
       const nowAfterRender = performance.now()
@@ -426,6 +437,17 @@ export const EffectRenderer = forwardRef<EffectRendererHandle, Props>(function E
         if (source) {
           const evaluatedEffect = effect.keyframes ? evaluateEffectAtTime(effect, currentTime) : effect
           updateBlobTrackerOverlay(pass, evaluatedEffect, source, resolution)
+        }
+      }
+      if (effect.effectId === 'motionGlow' && sourceVideo) {
+        const evaluatedEffect = effect.keyframes ? evaluateEffectAtTime(effect, currentTime) : effect
+        updateMotionGlowOverlay(pass, evaluatedEffect, sourceVideo, resolution)
+      }
+      if (effect.effectId === 'objectWarp') {
+        const source = sourceVideo ?? sourceImage
+        if (source) {
+          const evaluatedEffect = effect.keyframes ? evaluateEffectAtTime(effect, currentTime) : effect
+          updateObjectWarpTracking(pass, evaluatedEffect, source)
         }
       }
       orderedPasses.push(pass)

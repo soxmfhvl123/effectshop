@@ -190,15 +190,32 @@ Canvas2D-authored texture on top of the source rather than being pure GLSL
 - **Voronoi Cells** (`src/effects/shaders/voronoiCells.ts`) — animated cellular/Worley-noise mosaic:
   jittered feature points per grid cell, cell fill sampled from the source image at its nearest
   point, edges drawn via the standard F2-F1 (distance to 2nd-nearest minus nearest point) trick.
+- **Object Glow** (`src/effects/shaders/objectGlow.ts`) — rim-light glow that follows the real
+  detected silhouette (not a bounding box) of whatever's far from a key color: for every pixel it
+  samples the same chroma-key mask at a ring of surrounding offsets, so the glow brightness tracks
+  how close that pixel is to the actual object edge. Pure GLSL, single pass, works on stills too.
+- **Color Isolation** (`src/effects/shaders/colorIsolation.ts`) — classic "color pop": desaturate
+  and dim everything except the chroma-key-detected object, or (toggle `Tint Object`) tint just the
+  object instead and leave the rest of the frame untouched. Same key-color/threshold mask as Object
+  Glow/Point Cloud, applied as a per-pixel blend rather than a glow.
+- **Motion Glow** (`src/effects/motionDetector.ts` + `src/effects/motionGlowOverlay.ts`) — genuine
+  frame-to-frame pixel-difference motion detection (not chroma-key — it diffs the current frame
+  against the previous one), with a JS-side particle trail that spawns at each detected motion
+  region and fades out over `Trail Duration` rather than a GPU feedback buffer. **Video only**: a
+  still image has no second frame to diff against, so it's a no-op there by design, not a bug.
 
-**Distort** — new top-level category (`EffectCategory` in `src/types/effect.ts`), all three
-pivoting around a `centerX`/`centerY` point:
+**Distort** — all pivot around a `centerX`/`centerY` point (`EffectCategory` in `src/types/effect.ts`):
 - **Ripple** (`src/effects/shaders/ripple.ts`) — concentric sine waves displacing the sample
   radially outward from the center
 - **Swirl** (`src/effects/shaders/swirl.ts`) — rotates the sample around the center by an angle
   that falls off (squared, so it's concentrated near the middle) with distance
 - **Pinch / Bulge** (`src/effects/shaders/pinchBulge.ts`) — remaps sample radius by a power curve
   within a radius; positive amount bulges outward (fisheye-like), negative pinches inward
+- **Object Warp** (`src/effects/objectWarpTracking.ts`) — reuses the Swirl shader, but
+  `centerX`/`centerY` are driven automatically every detection tick by the chroma-key-detected
+  object's position (largest blob, exponentially smoothed by `Follow Smoothing`) instead of being
+  fixed sliders, so the distortion visually follows the object around the frame. Works on stills
+  (center locks to the object's position) and video (center tracks it as it moves).
 
 Presets (`src/presets/presets.ts`): Riso Zine, Retro CRT, 90s Cyberpunk,
 Gameboy Noir, Thermal Scan, TouchDesigner (Duotone + Point Cloud + Flow Field,
@@ -211,20 +228,29 @@ add its entry (with `implemented: true`) to `src/effects/registry.ts`.
 
 ### Overlay-texture effects
 
-Text and Blob Tracker don't fit the "uniforms in, pixels out" shape every
-other effect uses — text layout and dashed HUD lines are far easier with the
-Canvas2D API than GLSL. Both instead draw into a per-pass offscreen canvas
-(`src/effects/overlayCanvas.ts`, keyed by `WeakMap<ShaderPass, ...>` so each
-effect instance gets its own) and composite that canvas as a texture with a
-trivial shared alpha-blend shader (`overlayBlend.ts`). Text's canvas is
-redrawn synchronously whenever its parameters change (cheap). Blob Tracker's
-needs the actual source pixels, which `updatePassUniforms` doesn't have
-access to, so it's driven separately from `EffectRenderer.tsx`: once
-immediately when the effect is added or the media changes, and then on a
-150ms throttle during video playback (`BLOB_TRACKER_UPDATE_INTERVAL`) rather
-than every frame — a full-resolution canvas redraw + pixel readback 60
-times a second would be wasted work for a HUD that only needs to look live,
-not actually track in real time.
+Text, Blob Tracker and Motion Glow don't fit the "uniforms in, pixels out"
+shape every other effect uses — text layout and HUD-style drawing are far
+easier with the Canvas2D API than GLSL. All three instead draw into a
+per-pass offscreen canvas (`src/effects/overlayCanvas.ts`, keyed by
+`WeakMap<ShaderPass, ...>` so each effect instance gets its own) and
+composite that canvas as a texture with a trivial shared alpha-blend shader
+(`overlayBlend.ts`). Text's canvas is redrawn synchronously whenever its
+parameters change (cheap). Blob Tracker's and Motion Glow's need the actual
+source pixels, which `updatePassUniforms` doesn't have access to, so both are
+driven separately from `EffectRenderer.tsx`: once immediately when the effect
+is added or the media changes, and then on a 150ms throttle during playback
+(`BLOB_TRACKER_UPDATE_INTERVAL`, shared by both) rather than every frame — a
+full-resolution canvas redraw + pixel readback 60 times a second would be
+wasted work for effects that only need to look live, not actually track in
+real time. Motion Glow additionally keeps a small JS-side array of
+fading trail particles (`motionGlowOverlay.ts`) rather than a GPU
+ping-pong buffer, redrawing all of them into the overlay canvas each tick.
+
+Object Warp (`objectWarpTracking.ts`) follows the same "needs source pixels,
+driven from EffectRenderer on the same throttle" pattern, but isn't an
+overlay-texture effect — it reuses the normal Swirl shader pass and just
+pushes two numeric uniforms (`uCenterX`/`uCenterY`) directly instead of
+drawing anything.
 
 ## Assumptions & notable implementation choices
 

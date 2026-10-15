@@ -5,6 +5,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import type { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import { createPass, updatePassUniforms } from '../engine/passes'
 import { updateBlobTrackerOverlay } from './blobTrackerOverlay'
+import { updateMotionGlowOverlay } from './motionGlowOverlay'
 import { getEffectDefinition } from './registry'
 import { getDemoCanvas } from './thumbnailDemo'
 import type { AppliedEffect, Preset } from '../types/effect'
@@ -77,6 +78,13 @@ function renderThumbnail(cacheKey: string, cache: Map<string, string>, effects: 
     updatePassUniforms(pass, effect, resolution)
     if (effect.effectId === 'blobTracker') {
       updateBlobTrackerOverlay(pass, effect, getDemoCanvas(), resolution)
+    }
+    // Motion Glow needs a real second frame to diff against, which the
+    // static demo canvas can't provide — this just makes sure tOverlay gets
+    // a properly sized (if blank) texture instead of the factory's
+    // zero-size placeholder, so the thumbnail renders without erroring.
+    if (effect.effectId === 'motionGlow') {
+      updateMotionGlowOverlay(pass, effect, getDemoCanvas(), resolution)
     }
     createdPasses.push(pass)
   }

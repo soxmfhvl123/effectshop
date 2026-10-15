@@ -2,8 +2,11 @@
 // Not real object detection — it draws the source frame into a small grid,
 // masks pixels whose color is far from a chosen "key color" (classic
 // chroma-key logic, inverted: far-from-key = foreground), finds connected
-// regions in that mask, and turns them into boxes. Good enough to produce a
+// regions in that mask (via connectedComponents.ts, shared with
+// MotionDetector), and turns them into boxes. Good enough to produce a
 // plausible-looking "AI tracker" HUD without an ML dependency.
+
+import { findRegions } from './connectedComponents'
 
 export interface BlobBox {
   id: number
@@ -13,14 +16,6 @@ export interface BlobBox {
   h: number // normalized 0..1
   label: string
   color: string
-}
-
-interface RawRegion {
-  minX: number
-  minY: number
-  maxX: number
-  maxY: number
-  count: number
 }
 
 const GRID_W = 48
@@ -103,51 +98,7 @@ export class BlobDetector {
       mask[i] = dist > threshDist ? 1 : 0
     }
 
-    const visited = new Uint8Array(w * h)
-    const regions: RawRegion[] = []
-    const stack: number[] = []
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const start = y * w + x
-        if (!mask[start] || visited[start]) continue
-        let minX = x
-        let maxX = x
-        let minY = y
-        let maxY = y
-        let count = 0
-        stack.push(start)
-        visited[start] = 1
-        while (stack.length > 0) {
-          const cur = stack.pop() as number
-          const cx = cur % w
-          const cy = (cur / w) | 0
-          count++
-          if (cx < minX) minX = cx
-          if (cx > maxX) maxX = cx
-          if (cy < minY) minY = cy
-          if (cy > maxY) maxY = cy
-
-          if (cx > 0 && mask[cur - 1] && !visited[cur - 1]) {
-            visited[cur - 1] = 1
-            stack.push(cur - 1)
-          }
-          if (cx < w - 1 && mask[cur + 1] && !visited[cur + 1]) {
-            visited[cur + 1] = 1
-            stack.push(cur + 1)
-          }
-          if (cur - w >= 0 && mask[cur - w] && !visited[cur - w]) {
-            visited[cur - w] = 1
-            stack.push(cur - w)
-          }
-          if (cur + w < w * h && mask[cur + w] && !visited[cur + w]) {
-            visited[cur + w] = 1
-            stack.push(cur + w)
-          }
-        }
-        if (count >= MIN_REGION_CELLS) regions.push({ minX, minY, maxX, maxY, count })
-      }
-    }
-
+    const regions = findRegions(mask, w, h, MIN_REGION_CELLS)
     regions.sort((a, b) => b.count - a.count)
     const top = regions.slice(0, Math.max(1, Math.round(opts.maxBlobs)))
 

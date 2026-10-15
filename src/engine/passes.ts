@@ -39,6 +39,8 @@ import { ledScreenFragmentShader, ledScreenVertexShader } from '../effects/shade
 import { rippleFragmentShader, rippleVertexShader } from '../effects/shaders/ripple'
 import { swirlFragmentShader, swirlVertexShader } from '../effects/shaders/swirl'
 import { pinchBulgeFragmentShader, pinchBulgeVertexShader } from '../effects/shaders/pinchBulge'
+import { objectGlowFragmentShader, objectGlowVertexShader } from '../effects/shaders/objectGlow'
+import { colorIsolationFragmentShader, colorIsolationVertexShader } from '../effects/shaders/colorIsolation'
 
 const num = (v: unknown, fallback = 0) => (typeof v === 'number' ? v : Number(v) || fallback)
 
@@ -554,6 +556,67 @@ const PASS_FACTORY: Record<string, () => ShaderPass> = {
       vertexShader: pinchBulgeVertexShader,
       fragmentShader: pinchBulgeFragmentShader,
     }),
+  objectGlow: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uKeyColor: { value: new THREE.Color('#000000') },
+        uThreshold: { value: 0.3 },
+        uGlowWidth: { value: 14 },
+        uGlowIntensity: { value: 1.4 },
+        uGlowColor: { value: new THREE.Color('#00ffc8') },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: objectGlowVertexShader,
+      fragmentShader: objectGlowFragmentShader,
+    }),
+  colorIsolation: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uKeyColor: { value: new THREE.Color('#000000') },
+        uThreshold: { value: 0.3 },
+        uTintMode: { value: 0 },
+        uTintColor: { value: new THREE.Color('#ff2d7a') },
+        uTintStrength: { value: 0.7 },
+        uBackgroundSaturation: { value: 0 },
+        uBackgroundBrightness: { value: 1 },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: colorIsolationVertexShader,
+      fragmentShader: colorIsolationFragmentShader,
+    }),
+  // Motion Glow's trail particles are driven by updateMotionGlowOverlay
+  // (motionGlowOverlay.ts) from EffectRenderer, same overlay-blend pattern
+  // as Blob Tracker — no static uniforms pushed here.
+  motionGlow: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        tOverlay: { value: new THREE.Texture() },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: overlayBlendVertexShader,
+      fragmentShader: overlayBlendFragmentShader,
+    }),
+  // Object Warp reuses the swirl shader, but uCenterX/uCenterY are driven
+  // externally by updateObjectWarpTracking (objectWarpTracking.ts) from
+  // EffectRenderer, which follows the primary detected blob's position.
+  objectWarp: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uAngle: { value: 150 },
+        uRadius: { value: 160 },
+        uCenterX: { value: 0.5 },
+        uCenterY: { value: 0.5 },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: swirlVertexShader,
+      fragmentShader: swirlFragmentShader,
+    }),
 }
 
 export function isEffectRenderable(effectId: string): boolean {
@@ -785,6 +848,32 @@ export function updatePassUniforms(pass: ShaderPass, effect: AppliedEffect, reso
       u.uRadius.value = num(effect.parameters.radius, 150)
       u.uCenterX.value = num(effect.parameters.centerX, 0.5)
       u.uCenterY.value = num(effect.parameters.centerY, 0.5)
+      break
+    case 'objectGlow':
+      u.uKeyColor.value = hexToRgb(effect.parameters.keyColor, u.uKeyColor.value)
+      u.uThreshold.value = num(effect.parameters.threshold, 0.3)
+      u.uGlowWidth.value = num(effect.parameters.glowWidth, 14)
+      u.uGlowIntensity.value = num(effect.parameters.glowIntensity, 1.4)
+      u.uGlowColor.value = hexToRgb(effect.parameters.glowColor, u.uGlowColor.value)
+      break
+    case 'colorIsolation':
+      u.uKeyColor.value = hexToRgb(effect.parameters.keyColor, u.uKeyColor.value)
+      u.uThreshold.value = num(effect.parameters.threshold, 0.3)
+      u.uTintMode.value = effect.parameters.tintObject ? 1 : 0
+      u.uTintColor.value = hexToRgb(effect.parameters.tintColor, u.uTintColor.value)
+      u.uTintStrength.value = num(effect.parameters.tintStrength, 0.7)
+      u.uBackgroundSaturation.value = num(effect.parameters.backgroundSaturation, 0)
+      u.uBackgroundBrightness.value = num(effect.parameters.backgroundBrightness, 1)
+      break
+    // 'motionGlow' has no static uniforms to push here — its tOverlay is
+    // populated by updateMotionGlowOverlay, called from EffectRenderer
+    // where the source video is available.
+    // 'objectWarp' leaves uCenterX/uCenterY untouched here — those are
+    // driven by updateObjectWarpTracking from EffectRenderer. Its other
+    // params (angle/radius) still come through the normal path.
+    case 'objectWarp':
+      u.uAngle.value = num(effect.parameters.angle, 150)
+      u.uRadius.value = num(effect.parameters.radius, 160)
       break
   }
 }
