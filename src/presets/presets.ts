@@ -138,4 +138,203 @@ export const PRESETS: Preset[] = [
       },
     ],
   },
+  // The following seven all share one ordering convention: the
+  // object-tracking effect runs FIRST (against the real source colors, so
+  // its chroma-key mask reads correctly), then a full-frame color grade
+  // runs SECOND on top of it. Doing it in the other order would mean the
+  // tracking effect's keyColor has to match whatever the grade happens to
+  // remap the background to, which is fragile; detect-then-grade sidesteps
+  // that entirely.
+  {
+    id: 'subject-aura',
+    name: 'Subject Aura',
+    description: 'Desaturated background with a glowing cyan rim around the detected subject.',
+    implemented: true,
+    effects: [
+      {
+        effectId: 'colorIsolation',
+        name: 'Color Isolation',
+        enabled: true,
+        opacity: 1,
+        parameters: {
+          keyColor: '#000000',
+          threshold: 0.32,
+          tintObject: false,
+          tintColor: '#ff2d7a',
+          tintStrength: 0.7,
+          backgroundSaturation: 0.08,
+          backgroundBrightness: 0.75,
+        },
+      },
+      {
+        effectId: 'objectGlow',
+        name: 'Object Glow',
+        enabled: true,
+        opacity: 0.9,
+        parameters: { keyColor: '#000000', threshold: 0.32, glowWidth: 20, glowIntensity: 1.8, glowColor: '#7fe8ff' },
+      },
+    ],
+  },
+  {
+    id: 'mercury',
+    name: 'Mercury',
+    description: 'The subject melts into a chrome liquid-metal blob with a cool steel grade.',
+    implemented: true,
+    effects: [
+      {
+        effectId: 'liquidMetal',
+        name: 'Liquid Metal',
+        enabled: true,
+        opacity: 1,
+        parameters: {
+          keyColor: '#000000',
+          threshold: 0.3,
+          maxBlobs: 6,
+          radiusScale: 1.1,
+          mergeThreshold: 0.9,
+          refraction: 26,
+          rimIntensity: 0.8,
+          liquidColor: '#cfe8ff',
+          tint: 0.5,
+        },
+      },
+      {
+        effectId: 'monochrome',
+        name: 'Monochrome',
+        enabled: true,
+        opacity: 0.85,
+        parameters: { tint: '#9fb8c8', contrast: 1.2 },
+      },
+    ],
+  },
+  {
+    id: 'flux-sketch',
+    name: 'Flux Sketch',
+    description: 'Iron-filing magnetic flux lines over a navy blueprint grade.',
+    implemented: true,
+    effects: [
+      {
+        effectId: 'magneticField',
+        name: 'Magnetic Field',
+        enabled: true,
+        opacity: 1,
+        parameters: {
+          keyColor: '#000000',
+          threshold: 0.3,
+          spacing: 11,
+          lineLength: 9,
+          thickness: 1.1,
+          falloff: 70,
+          flowSpeed: 0.9,
+          fieldColor: '#eaf6ff',
+        },
+      },
+      {
+        effectId: 'monochrome',
+        name: 'Monochrome',
+        enabled: true,
+        opacity: 1,
+        parameters: { tint: '#1b3a66', contrast: 1.35 },
+      },
+    ],
+  },
+  {
+    id: 'firefly-dusk',
+    name: 'Firefly Dusk',
+    description: 'A warm swarm of fireflies orbiting the subject under a dusky vintage grade.',
+    implemented: true,
+    effects: [
+      {
+        effectId: 'fireflySwarm',
+        name: 'Firefly Swarm',
+        enabled: true,
+        opacity: 1,
+        parameters: {
+          keyColor: '#000000',
+          threshold: 0.3,
+          count: 70,
+          swarmRadius: 90,
+          orbitSpeed: 0.8,
+          size: 1.1,
+          trailDecay: 0.08,
+          hue: 0.11,
+          hueRange: 0.06,
+          flicker: 0.6,
+        },
+      },
+      {
+        effectId: 'vintageFade',
+        name: 'Vintage Fade',
+        enabled: true,
+        opacity: 0.8,
+        parameters: { fade: 0.3, warmth: 0.5, saturation: 0.8, vignette: 0.45 },
+      },
+    ],
+  },
+  {
+    id: 'afterglow',
+    name: 'Afterglow',
+    description: 'A long-exposure pink light-painting trail of the subject against a moody vignette.',
+    implemented: true,
+    effects: [
+      {
+        effectId: 'echoTrail',
+        name: 'Echo Trail',
+        enabled: true,
+        opacity: 1,
+        parameters: { keyColor: '#000000', threshold: 0.3, decay: 0.05, exposure: 0.9, tintColor: '#ff3cb4', tintStrength: 0.5 },
+      },
+      {
+        effectId: 'vintageFade',
+        name: 'Vintage Fade',
+        enabled: true,
+        opacity: 0.85,
+        parameters: { fade: 0.2, warmth: 0.1, saturation: 0.6, vignette: 0.55 },
+      },
+    ],
+  },
+  {
+    id: 'warp-drive',
+    name: 'Warp Drive',
+    description: 'A swirl that tracks the subject like a portal, with a chromatic-aberration split.',
+    implemented: true,
+    effects: [
+      {
+        effectId: 'objectWarp',
+        name: 'Object Warp',
+        enabled: true,
+        opacity: 1,
+        parameters: { keyColor: '#000000', threshold: 0.3, angle: 220, radius: 200, smoothing: 0.85 },
+      },
+      {
+        effectId: 'rgbShift',
+        name: 'RGB Shift',
+        enabled: true,
+        opacity: 0.7,
+        parameters: { amount: 5, angle: 0, radialDistortion: true },
+      },
+    ],
+  },
+  {
+    id: 'motion-trace',
+    name: 'Motion Trace',
+    description: 'Teal motion trails with VHS jitter, like a glitchy security-cam feed. Video only.',
+    implemented: true,
+    effects: [
+      {
+        effectId: 'motionGlow',
+        name: 'Motion Glow',
+        enabled: true,
+        opacity: 1,
+        parameters: { sensitivity: 0.55, maxBlobs: 14, trailDuration: 0.5, intensity: 1.8, glowColor: '#00ffc8' },
+      },
+      {
+        effectId: 'vhs',
+        name: 'VHS',
+        enabled: true,
+        opacity: 0.6,
+        parameters: { jitter: 3, noise: 0.12, speed: 0.4 },
+      },
+    ],
+  },
 ]

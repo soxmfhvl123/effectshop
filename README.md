@@ -247,6 +247,18 @@ Gameboy Noir, Thermal Scan, TouchDesigner (Duotone + Point Cloud + Flow Field,
 tuned so Point Cloud's key color matches Duotone's shadow color — the object
 mask still reads correctly after the duotone remap) — all live.
 
+A second batch covers the 8 object-tracking effects: Subject Aura (Color
+Isolation + Object Glow), Mercury (Liquid Metal + Monochrome), Flux Sketch
+(Magnetic Field + Monochrome), Firefly Dusk (Firefly Swarm + Vintage Fade),
+Afterglow (Echo Trail + Vintage Fade), Warp Drive (Object Warp + RGB Shift)
+and Motion Trace (Motion Glow + VHS, video only). These all follow one
+ordering rule: the tracking effect runs **first** (against the real source
+colors, so its key-color mask reads correctly) and the color grade runs
+**second**, on top of it — the reverse order would mean the tracking
+effect's `keyColor` has to match whatever the grade happens to remap the
+background to, which is fragile to tune and easy to break when either
+effect's defaults change.
+
 To add a new effect: write the shader in `src/effects/shaders/`, register a
 `ShaderPass` factory + uniform updater for it in `src/engine/passes.ts`, and
 add its entry (with `implemented: true`) to `src/effects/registry.ts`.
