@@ -23,6 +23,7 @@ export type EffectCategory =
   | 'Color/Tone'
   | 'Generate'
   | 'Distort'
+  | 'Overlay'
 
 export interface Keyframe {
   time: number // seconds, video timeline position
@@ -53,6 +54,13 @@ export interface EffectDefinition {
   description: string
   implemented: boolean
   parameters: EffectParameter[]
+  // Absent (the default) = a normal single-pass GLSL effect: registered in
+  // passes.ts's PASS_FACTORY with its own uniforms. 'overlay' = driven by a
+  // CPU-side detect+draw step that needs the actual source media (not just
+  // `tDiffuse`), registered instead in effects/overlayRegistry.ts -- no
+  // PASS_FACTORY entry or EffectRenderer.tsx special-casing required, see
+  // "Overlay-texture effects" in README for the full picture.
+  kind?: 'overlay'
 }
 
 export interface Preset {

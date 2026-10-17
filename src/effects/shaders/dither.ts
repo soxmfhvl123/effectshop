@@ -8,7 +8,10 @@
 //   1-bit  -> 4x4 matrix, 2 levels   |  2-bit   -> 4x4 matrix, 4 levels
 //   Bayer4x4 -> 4x4 matrix, 8 levels |  Bayer8x8 -> 8x8 matrix, 16 levels
 // `palette` recolors the quantized luminance; Monochrome uses a grayscale
-// ramp, Gameboy/Cyberpunk index into a fixed 4-color set.
+// ramp, Gameboy/Cyberpunk index into a fixed 4-color set, and Custom mixes
+// between two free-form ink/paper colors (added for the "Aesthetics 07"
+// batch's one-bit/receipt-style looks, which need colors other than pure
+// black/white).
 
 export const ditherVertexShader = /* glsl */ `
   varying vec2 vUv;
@@ -24,7 +27,9 @@ export const ditherFragmentShader = /* glsl */ `
   uniform float uPixelScale;  // dither cell size in px (1..8, from the scale param)
   uniform float uMatrixMode;  // 0 = Bayer 4x4, 1 = Bayer 8x8
   uniform float uLevels;      // quantization levels
-  uniform float uPalette;     // 0 = monochrome, 1 = gameboy, 2 = cyberpunk
+  uniform float uPalette;     // 0 = monochrome, 1 = gameboy, 2 = cyberpunk, 3 = custom
+  uniform vec3 uInkColor;     // used when uPalette == 3
+  uniform vec3 uPaperColor;   // used when uPalette == 3
   uniform float uOpacity;
   varying vec2 vUv;
 
@@ -64,9 +69,11 @@ export const ditherFragmentShader = /* glsl */ `
     vec3 effectColor;
     if (uPalette < 0.5) {
       effectColor = vec3(level);
-    } else {
+    } else if (uPalette < 2.5) {
       float idx = clamp(floor(level * 3.0 + 0.5), 0.0, 3.0);
       effectColor = uPalette < 1.5 ? gameboyColor(idx) : cyberpunkColor(idx);
+    } else {
+      effectColor = mix(uInkColor, uPaperColor, level);
     }
 
     vec3 outColor = mix(srcColor.rgb, effectColor, uOpacity);

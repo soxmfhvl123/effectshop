@@ -43,6 +43,12 @@ import { objectGlowFragmentShader, objectGlowVertexShader } from '../effects/sha
 import { colorIsolationFragmentShader, colorIsolationVertexShader } from '../effects/shaders/colorIsolation'
 import { magneticFieldFragmentShader, magneticFieldVertexShader } from '../effects/shaders/magneticField'
 import { liquidMetalFragmentShader, liquidMetalVertexShader, MAX_METABALLS } from '../effects/shaders/liquidMetal'
+import { phosphorFragmentShader, phosphorVertexShader } from '../effects/shaders/phosphor'
+import { receiptTicketFragmentShader, receiptTicketVertexShader } from '../effects/shaders/receiptTicket'
+import { flashLightFragmentShader, flashLightVertexShader } from '../effects/shaders/flashLight'
+import { datamoshFragmentShader, datamoshVertexShader } from '../effects/shaders/datamosh'
+import { getEffectDefinition } from '../effects/registry'
+import { OVERLAY_UPDATERS } from '../effects/overlayRegistry'
 
 const num = (v: unknown, fallback = 0) => (typeof v === 'number' ? v : Number(v) || fallback)
 
@@ -61,7 +67,16 @@ const DITHER_TYPE_MAP: Record<string, { matrixMode: number; levels: number }> = 
   bayer8: { matrixMode: 1, levels: 16 },
 }
 
-const PALETTE_MAP: Record<string, number> = { monochrome: 0, gameboy: 1, cyberpunk: 2 }
+const PALETTE_MAP: Record<string, number> = { monochrome: 0, gameboy: 1, cyberpunk: 2, custom: 3 }
+
+const PHOSPHOR_COLOR_MAP: Record<string, string> = {
+  Pink: '#FF4FD8',
+  Green: '#33FF66',
+  Amber: '#FFB000',
+  White: '#E8F0FF',
+}
+
+const DATAMOSH_DIRECTION_MAP: Record<string, number> = { Motion: 0, Horizontal: 1, Vertical: 2, Random: 3 }
 
 // Maps effectId -> factory that builds a fresh ShaderPass with default uniforms.
 const PASS_FACTORY: Record<string, () => ShaderPass> = {
@@ -102,6 +117,8 @@ const PASS_FACTORY: Record<string, () => ShaderPass> = {
         uMatrixMode: { value: 0 },
         uLevels: { value: 8 },
         uPalette: { value: 0 },
+        uInkColor: { value: new THREE.Color('#111111') },
+        uPaperColor: { value: new THREE.Color('#F2F0E8') },
         uOpacity: { value: 1 },
       },
       vertexShader: ditherVertexShader,
@@ -687,15 +704,123 @@ const PASS_FACTORY: Record<string, () => ShaderPass> = {
       vertexShader: overlayBlendVertexShader,
       fragmentShader: overlayBlendFragmentShader,
     }),
+  phosphor: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uTime: { value: 0 },
+        uPhosphorColor: { value: new THREE.Color('#FF4FD8') },
+        uLevels: { value: 8 },
+        uBrightness: { value: 1.1 },
+        uGlowRadius: { value: 3 },
+        uGlowStrength: { value: 0.8 },
+        uScanlines: { value: 0.35 },
+        uFlicker: { value: 0.03 },
+        uBlackLevel: { value: new THREE.Color('#12040E') },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: phosphorVertexShader,
+      fragmentShader: phosphorFragmentShader,
+    }),
+  receiptTicket: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uDitherScale: { value: 2 },
+        uFade: { value: 0.35 },
+        uContrast: { value: 1.4 },
+        uInkColor: { value: new THREE.Color('#2B2B2E') },
+        uPaperColor: { value: new THREE.Color('#F5F2EA') },
+        uPaperNoise: { value: 0.25 },
+        uHeadStreaks: { value: 0.3 },
+        uBanding: { value: 0.15 },
+        uPrintWidth: { value: 1.0 },
+        uTornEdges: { value: 1 },
+        uEdgeSize: { value: 12 },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: receiptTicketVertexShader,
+      fragmentShader: receiptTicketFragmentShader,
+    }),
+  flashLight: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uTime: { value: 0 },
+        uCenter: { value: new THREE.Vector2(0.5, 0.4) },
+        uIntensity: { value: 1.4 },
+        uFalloff: { value: 0.3 },
+        uHighlightClip: { value: 0.6 },
+        uAmbient: { value: 0.25 },
+        uContrast: { value: 1.5 },
+        uTemperature: { value: -0.2 },
+        uShadowOffset: { value: new THREE.Vector2(0.012, 0.018) },
+        uShadowStrength: { value: 0.55 },
+        uGrain: { value: 0.06 },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: flashLightVertexShader,
+      fragmentShader: flashLightFragmentShader,
+    }),
+  datamosh: () =>
+    new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uTime: { value: 0 },
+        uBlockSize: { value: 32 },
+        uAmount: { value: 0.35 },
+        uDisplacement: { value: 0.08 },
+        uSmear: { value: 0.5 },
+        uDirection: { value: 0 },
+        uChromaBleed: { value: 0.012 },
+        uQuantize: { value: 0.3 },
+        uSeed: { value: 42 },
+        uAnimate: { value: 0 },
+        uSpeed: { value: 1 },
+        uOpacity: { value: 1 },
+      },
+      vertexShader: datamoshVertexShader,
+      fragmentShader: datamoshFragmentShader,
+    }),
+}
+
+// A `kind: 'overlay'` effect with no PASS_FACTORY entry of its own (every
+// *new* overlay effect, per overlayRegistry.ts) still needs a pass to
+// render -- it just always needs the exact same generic overlay-blend
+// shader, so build one on demand instead of requiring a one-line factory
+// per effect.
+function createGenericOverlayPass(): ShaderPass {
+  return new ShaderPass({
+    uniforms: {
+      tDiffuse: { value: null },
+      tOverlay: { value: new THREE.Texture() },
+      uOpacity: { value: 1 },
+    },
+    vertexShader: overlayBlendVertexShader,
+    fragmentShader: overlayBlendFragmentShader,
+  })
+}
+
+function isGenericOverlayEffect(effectId: string): boolean {
+  return getEffectDefinition(effectId)?.kind === 'overlay' && effectId in OVERLAY_UPDATERS
 }
 
 export function isEffectRenderable(effectId: string): boolean {
-  return effectId in PASS_FACTORY
+  return effectId in PASS_FACTORY || isGenericOverlayEffect(effectId)
 }
 
 export function createPass(effect: AppliedEffect): ShaderPass | null {
   const factory = PASS_FACTORY[effect.effectId]
-  if (!factory) return null
+  if (!factory) {
+    if (!isGenericOverlayEffect(effect.effectId)) return null
+    const pass = createGenericOverlayPass()
+    updatePassUniforms(pass, effect, new THREE.Vector2(1, 1))
+    return pass
+  }
   const pass = factory()
   updatePassUniforms(pass, effect, new THREE.Vector2(1, 1))
   return pass
@@ -729,6 +854,8 @@ export function updatePassUniforms(pass: ShaderPass, effect: AppliedEffect, reso
       u.uMatrixMode.value = mapping.matrixMode
       u.uLevels.value = mapping.levels
       u.uPalette.value = PALETTE_MAP[String(effect.parameters.palette)] ?? 0
+      u.uInkColor.value = hexToRgb(effect.parameters.inkColor, u.uInkColor.value)
+      u.uPaperColor.value = hexToRgb(effect.parameters.paperColor, u.uPaperColor.value)
       break
     }
     case 'rgbShift':
@@ -969,6 +1096,56 @@ export function updatePassUniforms(pass: ShaderPass, effect: AppliedEffect, reso
     // -- their tOverlay textures are populated by updateFireflySwarmOverlay
     // / updateEchoTrailOverlay, called from EffectRenderer where the
     // source media is available.
+    case 'phosphor': {
+      const colorName = String(effect.parameters.phosphorColor ?? 'Pink')
+      const hex = colorName === 'Custom' ? effect.parameters.customColor : PHOSPHOR_COLOR_MAP[colorName]
+      u.uPhosphorColor.value = hexToRgb(hex, u.uPhosphorColor.value)
+      u.uLevels.value = num(effect.parameters.levels, 8)
+      u.uBrightness.value = num(effect.parameters.brightness, 1.1)
+      u.uGlowRadius.value = num(effect.parameters.glowRadius, 3)
+      u.uGlowStrength.value = num(effect.parameters.glowStrength, 0.8)
+      u.uScanlines.value = num(effect.parameters.scanlines, 0.35)
+      u.uFlicker.value = num(effect.parameters.flicker, 0.03)
+      u.uBlackLevel.value = hexToRgb(effect.parameters.blackLevel, u.uBlackLevel.value)
+      break
+    }
+    case 'receiptTicket':
+      u.uDitherScale.value = num(effect.parameters.ditherScale, 2)
+      u.uFade.value = num(effect.parameters.fade, 0.35)
+      u.uContrast.value = num(effect.parameters.contrast, 1.4)
+      u.uInkColor.value = hexToRgb(effect.parameters.inkColor, u.uInkColor.value)
+      u.uPaperColor.value = hexToRgb(effect.parameters.paperColor, u.uPaperColor.value)
+      u.uPaperNoise.value = num(effect.parameters.paperNoise, 0.25)
+      u.uHeadStreaks.value = num(effect.parameters.headStreaks, 0.3)
+      u.uBanding.value = num(effect.parameters.banding, 0.15)
+      u.uPrintWidth.value = num(effect.parameters.printWidth, 1.0)
+      u.uTornEdges.value = effect.parameters.tornEdges === false ? 0 : 1
+      u.uEdgeSize.value = num(effect.parameters.edgeSize, 12)
+      break
+    case 'flashLight':
+      u.uCenter.value.set(num(effect.parameters.centerX, 0.5), num(effect.parameters.centerY, 0.4))
+      u.uIntensity.value = num(effect.parameters.intensity, 1.4)
+      u.uFalloff.value = num(effect.parameters.falloff, 0.3)
+      u.uHighlightClip.value = num(effect.parameters.highlightClip, 0.6)
+      u.uAmbient.value = num(effect.parameters.ambient, 0.25)
+      u.uContrast.value = num(effect.parameters.contrast, 1.5)
+      u.uTemperature.value = num(effect.parameters.temperature, -0.2)
+      u.uShadowOffset.value.set(num(effect.parameters.shadowOffsetX, 0.012), num(effect.parameters.shadowOffsetY, 0.018))
+      u.uShadowStrength.value = num(effect.parameters.shadowStrength, 0.55)
+      u.uGrain.value = num(effect.parameters.grain, 0.06)
+      break
+    case 'datamosh':
+      u.uBlockSize.value = num(effect.parameters.blockSize, 32)
+      u.uAmount.value = num(effect.parameters.amount, 0.35)
+      u.uDisplacement.value = num(effect.parameters.displacement, 0.08)
+      u.uSmear.value = num(effect.parameters.smear, 0.5)
+      u.uDirection.value = DATAMOSH_DIRECTION_MAP[String(effect.parameters.direction)] ?? 0
+      u.uChromaBleed.value = num(effect.parameters.chromaBleed, 0.012)
+      u.uQuantize.value = num(effect.parameters.quantize, 0.3)
+      u.uSeed.value = num(effect.parameters.seed, 42)
+      u.uAnimate.value = effect.parameters.animate ? 1 : 0
+      u.uSpeed.value = num(effect.parameters.speed, 1)
+      break
   }
 }
 

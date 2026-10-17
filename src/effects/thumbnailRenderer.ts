@@ -9,6 +9,7 @@ import { updateMotionGlowOverlay } from './motionGlowOverlay'
 import { updateMetaballTracking } from './metaballTracking'
 import { updateFireflySwarmOverlay } from './fireflySwarmOverlay'
 import { updateEchoTrailOverlay } from './echoTrailOverlay'
+import { OVERLAY_UPDATERS } from './overlayRegistry'
 import { getEffectDefinition } from './registry'
 import { getDemoCanvas } from './thumbnailDemo'
 import type { AppliedEffect, Preset } from '../types/effect'
@@ -101,6 +102,13 @@ function renderThumbnail(cacheKey: string, cache: Map<string, string>, effects: 
     }
     if (effect.effectId === 'echoTrail') {
       updateEchoTrailOverlay(pass, effect, getDemoCanvas(), resolution)
+    }
+    // Any `kind: 'overlay'` effect registered in overlayRegistry.ts (Blob
+    // Tracking and onward) gets its one-shot demo render here for free,
+    // same reasoning as the hand-written cases above.
+    const overlayEntry = OVERLAY_UPDATERS[effect.effectId]
+    if (overlayEntry) {
+      overlayEntry.update(pass, effect, getDemoCanvas(), resolution)
     }
     createdPasses.push(pass)
   }

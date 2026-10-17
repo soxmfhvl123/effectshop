@@ -127,16 +127,26 @@ implemented and enabled, for both images and video:
 - **Halftone Screen** (`src/effects/shaders/halftone.ts`)
 - **Cross Hatch** (`src/effects/shaders/crossHatch.ts`) — pen-and-ink engraving lines
 - **Emboss** (`src/effects/shaders/emboss.ts`) — directional relief/bump look
+- **Receipt Ticket** (`src/effects/shaders/receiptTicket.ts`) — convenience-store thermal-printer
+  look: faded (not pure-black) Bayer-dithered ink, paper grain, vertical print-head streaks,
+  horizontal density banding, and an optional narrower print width. `Torn Edges` cuts a zigzag
+  out of the top/bottom to fully transparent (not a background-colored fill), so PNG export reads
+  as an actual cutout receipt rather than a rectangle with a ragged line drawn on it.
 
 **Retro Display**
 - **Dither** (`src/effects/shaders/dither.ts`) — ordered/Bayer dithering, see
-  the "Dither approach" note below
+  the "Dither approach" note below. Palette also has a `Custom` option (free-form `inkColor`/
+  `paperColor`, not just the three fixed Monochrome/Gameboy/Cyberpunk ramps), added for the
+  "Aesthetics 07" batch's one-bit/receipt-style looks.
 - **CRT Screen / Scanlines** (`src/effects/shaders/crt.ts`)
 - **Pixelate** (`src/effects/shaders/pixelate.ts`) — hard mosaic blocks
 - **VHS Tracking** (`src/effects/shaders/vhs.ts`) — scanline jitter, tracking band, tape noise
 - **Posterize** (`src/effects/shaders/posterize.ts`) — flat color-band quantization, no dither
 - **NTSC** (`src/effects/shaders/ntsc.ts`) — composite-video chroma bleed, R/B offset, dot-crawl noise
 - **LED Screen** (`src/effects/shaders/ledScreen.ts`) — close-up RGB subpixel grid with darkened cell borders
+- **Phosphor Monitor** (`src/effects/shaders/phosphor.ts`) — single-color monochrome CRT: brightness
+  stepped to a handful of levels and remapped onto one phosphor color, a cheap single-pass
+  circular-tap bloom on bright areas, analytic scanlines, and a slow `uTime`-driven flicker.
 
 **Glitch**
 - **RGB Shift** (`src/effects/shaders/rgbShift.ts`)
@@ -145,6 +155,11 @@ implemented and enabled, for both images and video:
   a procedural pattern approximation
 - **Block Glitch** (`src/effects/shaders/blockGlitch.ts`) — randomized row-block displacement/channel swap
 - **Scan Displace** (`src/effects/shaders/scanDisplace.ts`) — smooth sine-wave scanline wobble
+- **Datamosh** (`src/effects/shaders/datamosh.ts`) — broken-compression-style glitch: a random
+  subset of blocks (hashed from the block id, so the pattern is stable rather than re-rolled every
+  pixel) get displaced and smeared along a direction, by default each block's own local brightness
+  gradient — the cheap single-pass approximation of a real datamosh misapplying a neighboring
+  block's motion vector.
 
 **Lens/Blur**
 - **Tilt-Shift Blur** (`src/effects/shaders/tiltShift.ts`) — sharp band, blurred outside it
@@ -162,6 +177,12 @@ implemented and enabled, for both images and video:
 - **Levels** (`src/effects/shaders/levels.ts`) — classic black-point/white-point/gamma remap
 - **Threshold** (`src/effects/shaders/threshold.ts`) — hard two-level black/white cutoff, distinct
   from Posterize (multiple bands) and Dither (patterned quantization)
+- **Flash Light** (`src/effects/shaders/flashLight.ts`) — point-and-shoot flash fired at night: a
+  bright falloff disc around a center point blows out highlights (a soft tone-curve clip toward
+  white, not a hard clamp), everything outside it drops to an ambient level, and a hard-edged
+  approximate shadow is cast just behind the subject by comparing each pixel's brightness against
+  a shifted sample of itself (not a real shadow volume — "feels like a shadow fell behind them",
+  not a physically correct one).
 
 **Generate** — procedural/generative effects, several composite a
 Canvas2D-authored texture on top of the source rather than being pure GLSL
@@ -242,6 +263,17 @@ Canvas2D-authored texture on top of the source rather than being pure GLSL
   fixed sliders, so the distortion visually follows the object around the frame. Works on stills
   (center locks to the object's position) and video (center tracks it as it moves).
 
+**Overlay** — new top-level category, built against the generic `kind: 'overlay'` hook (see
+"Adding a new overlay effect" above):
+- **Blob Tracking** (`src/effects/blobTrackingDetector.ts` + `blobTrackingOverlay.ts`) — a
+  computer-vision-style HUD: boxes, connector lines and ID/coordinate labels over whatever's
+  "salient" by one of three general measures (Brightness, Saturation, or Sobel edge magnitude) —
+  no key color to pick, unlike Blob Tracker, so it reads reasonably on arbitrary photos out of the
+  box. `Fill` (Invert/Threshold/Tint) composites straight into the overlay canvas with Canvas2D
+  against a cached per-pass source-frame buffer (difference-blend, a thresholded sub-`ImageData`,
+  or a tinted `source-atop`) rather than a dedicated shader, specifically so it stays on the same
+  generic overlay-blend pass as every other overlay effect.
+
 Presets (`src/presets/presets.ts`): Riso Zine, Retro CRT, 90s Cyberpunk,
 Gameboy Noir, Thermal Scan, TouchDesigner (Duotone + Point Cloud + Flow Field,
 tuned so Point Cloud's key color matches Duotone's shadow color — the object
@@ -258,6 +290,13 @@ colors, so its key-color mask reads correctly) and the color grade runs
 effect's `keyColor` has to match whatever the grade happens to remap the
 background to, which is fragile to tune and easy to break when either
 effect's defaults change.
+
+A third batch ("Aesthetics 07" — real-time shader versions of 7 trending SNS
+photo styles) adds: Datamosh (Datamosh + RGB Shift), Blob Tracking (its
+defaults), Flash Light (Flash Light + Film Grain & Halation), Receipt Ticket
+(its defaults), One Bit Dither (Dither in 1-bit/custom-palette mode),
+Pink Phosphor (Phosphor Monitor + CRT Screen) — "CRT" from that reference set
+is identical to the existing Retro CRT preset above, so it isn't duplicated.
 
 To add a new effect: write the shader in `src/effects/shaders/`, register a
 `ShaderPass` factory + uniform updater for it in `src/engine/passes.ts`, and
@@ -300,6 +339,48 @@ EffectRenderer on the shared throttle" pattern, but aren't overlay-texture
 effects — they reuse a normal GLSL pass and just push numeric/array uniforms
 (`uCenterX`/`uCenterY`, or the `uBalls` metaball array) directly instead of
 drawing anything to a canvas.
+
+### Adding a new overlay effect (the `kind: 'overlay'` hook)
+
+The five effects above each needed their own `if (effect.effectId === '...')`
+block added to `EffectRenderer.tsx` (twice — once in the RAF loop, once in
+the sync-effect-stack effect) and their own `PASS_FACTORY` entry in
+`passes.ts`. That's fine for five effects built one at a time, but it means
+every *new* overlay effect touches the same two files in the same four
+places. **Blob Tracking** (Overlay category) is the first effect built
+against a generic alternative instead, and new overlay effects should use
+it too:
+
+1. Give the effect's `EffectDefinition` in `registry.ts` `kind: 'overlay'`.
+2. Write its detect+draw update function (same `(pass, effect, source,
+   resolution) => void` shape as the five hand-written ones above — see
+   `blobTrackingDetector.ts` + `blobTrackingOverlay.ts` for the pattern: a
+   small offscreen canvas for CPU detection, `getOverlayCanvas` + Canvas2D
+   for drawing, `texture.needsUpdate = true` + `uniforms.tOverlay.value =
+   texture` at the end).
+3. Register it in `src/effects/overlayRegistry.ts`'s `OVERLAY_UPDATERS` map,
+   with `throttled: true` if it only needs to re-detect on the shared
+   ~150ms cadence (a HUD-style effect) or omitted if it needs to run every
+   frame (a particle sim, a decaying trail).
+
+That's it — no `PASS_FACTORY` entry (`passes.ts` builds a generic
+overlay-blend pass on demand for any `kind: 'overlay'` effect that doesn't
+have one of its own), no `EffectRenderer.tsx` changes (its RAF loop and
+sync-effect-stack effect each do one `OVERLAY_UPDATERS` lookup that covers
+every registered overlay effect), and `thumbnailRenderer.ts` picks it up the
+same way for free. The five pre-existing overlay effects were deliberately
+**not** migrated onto this hook — they already work, and retrofitting five
+shipped effects for symmetry alone isn't worth the regression risk; migrate
+one only if you're already touching it for another reason.
+
+Blob Tracking itself: unlike Blob Tracker (which keys off a chosen color),
+it scores every pixel by Brightness, Saturation, or Sobel edge magnitude
+(`blobTrackingDetector.ts`) — no key color needed, so it reads reasonably on
+arbitrary photos out of the box. Its `fill` modes (Invert/Threshold/Tint)
+are pure Canvas2D compositing against a per-pass source-frame buffer
+(`difference` blend, a thresholded sub-`ImageData`, or `source-atop` tint)
+rather than a dedicated shader + box-array uniform, specifically so it could
+stay on the same generic overlay-blend pass as everything else.
 
 ## Assumptions & notable implementation choices
 

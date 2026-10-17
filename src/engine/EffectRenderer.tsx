@@ -15,6 +15,7 @@ import { updateObjectWarpTracking } from '../effects/objectWarpTracking'
 import { updateMetaballTracking } from '../effects/metaballTracking'
 import { updateFireflySwarmOverlay } from '../effects/fireflySwarmOverlay'
 import { updateEchoTrailOverlay } from '../effects/echoTrailOverlay'
+import { OVERLAY_UPDATERS } from '../effects/overlayRegistry'
 import type { AppliedEffect } from '../types/effect'
 
 const BLOB_TRACKER_UPDATE_INTERVAL = 0.15 // seconds between live re-detections during video playback
@@ -315,6 +316,13 @@ export const EffectRenderer = forwardRef<EffectRendererHandle, Props>(function E
         if (effect.effectId === 'echoTrail' && mediaSource) {
           updateEchoTrailOverlay(pass, evaluatedEffect, mediaSource, resolutionRef.current)
         }
+        // Generic hook for any `kind: 'overlay'` effect registered in
+        // overlayRegistry.ts (Blob Tracking and onward) -- one lookup here
+        // instead of a dedicated if-block per effect.
+        const overlayEntry = OVERLAY_UPDATERS[effect.effectId]
+        if (overlayEntry && mediaSource && (!overlayEntry.throttled || dueForBlobUpdate)) {
+          overlayEntry.update(pass, evaluatedEffect, mediaSource, resolutionRef.current)
+        }
       })
       composer.render()
       const nowAfterRender = performance.now()
@@ -485,6 +493,14 @@ export const EffectRenderer = forwardRef<EffectRendererHandle, Props>(function E
         if (source) {
           const evaluatedEffect = effect.keyframes ? evaluateEffectAtTime(effect, currentTime) : effect
           updateEchoTrailOverlay(pass, evaluatedEffect, source, resolution)
+        }
+      }
+      const overlayEntry = OVERLAY_UPDATERS[effect.effectId]
+      if (overlayEntry) {
+        const source = sourceVideo ?? sourceImage
+        if (source) {
+          const evaluatedEffect = effect.keyframes ? evaluateEffectAtTime(effect, currentTime) : effect
+          overlayEntry.update(pass, evaluatedEffect, source, resolution)
         }
       }
       orderedPasses.push(pass)
