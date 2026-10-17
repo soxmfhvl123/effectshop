@@ -9,13 +9,12 @@ import { getOverlayCanvas } from './overlayCanvas'
 // that's different here is "fill" (Invert/Threshold/Tint): rather than a
 // dedicated shader + uBoxes array uniform, the box's pixels are composited
 // straight into the overlay canvas with Canvas2D (difference-blend for
-// Invert, a thresholded sub-image for Threshold, source-atop for Tint) --
-// keeps this effect on the same generic overlay-blend shader as everything
-// else instead of needing its own fragment shader.
+// Invert, a thresholded sub-image for Threshold, source-atop for Tint),
+// drawing directly from `source` each time (no intermediate buffer canvas)
+// -- keeps this effect on the same generic overlay-blend shader as
+// everything else instead of needing its own fragment shader.
 interface BlobTrackingState {
   detector: BlobTrackingDetector
-  sourceBuffer: HTMLCanvasElement
-  sourceBufferCtx: CanvasRenderingContext2D
 }
 
 const stateMap = new WeakMap<ShaderPass, BlobTrackingState>()
@@ -76,7 +75,9 @@ function drawConnections(ctx: CanvasRenderingContext2D, blobs: TrackedBlob[], ce
 
 function applyFill(
   ctx: CanvasRenderingContext2D,
-  buffer: HTMLCanvasElement,
+  source: CanvasImageSource,
+  canvasWidth: number,
+  canvasHeight: number,
   box: { bx: number; by: number; bw: number; bh: number },
   mode: string,
   tintColor: string,
@@ -88,15 +89,15 @@ function applyFill(
   ctx.rect(bx, by, bw, bh)
   ctx.clip()
 
-  if (mode === 'Invert') {
-    ctx.drawImage(buffer, bx, by, bw, bh, bx, by, bw, bh)
-    ctx.globalCompositeOperation = 'difference'
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(bx, by, bw, bh)
-    ctx.globalCompositeOperation = 'source-over'
-  } else if (mode === 'Threshold') {
-    ctx.drawImage(buffer, bx, by, bw, bh, bx, by, bw, bh)
-    try {
+  try {
+    if (mode === 'Invert') {
+      ctx.drawImage(source, 0, 0, canvasWidth, canvasHeight)
+      ctx.globalCompositeOperation = 'difference'
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(bx, by, bw, bh)
+      ctx.globalCompositeOperation = 'source-over'
+    } else if (mode === 'Threshold') {
+      ctx.drawImage(source, 0, 0, canvasWidth, canvasHeight)
       const img = ctx.getImageData(bx, by, bw, bh)
       const d = img.data
       for (let i = 0; i < d.length; i += 4) {
@@ -107,17 +108,17 @@ function applyFill(
         d[i + 2] = v
       }
       ctx.putImageData(img, bx, by)
-    } catch {
-      // tainted canvas (cross-origin source) -- skip thresholding, keep the plain fill
+    } else if (mode === 'Tint') {
+      ctx.drawImage(source, 0, 0, canvasWidth, canvasHeight)
+      ctx.globalCompositeOperation = 'source-atop'
+      ctx.globalAlpha = 0.45
+      ctx.fillStyle = tintColor
+      ctx.fillRect(bx, by, bw, bh)
+      ctx.globalAlpha = 1
+      ctx.globalCompositeOperation = 'source-over'
     }
-  } else if (mode === 'Tint') {
-    ctx.drawImage(buffer, bx, by, bw, bh, bx, by, bw, bh)
-    ctx.globalCompositeOperation = 'source-atop'
-    ctx.globalAlpha = 0.45
-    ctx.fillStyle = tintColor
-    ctx.fillRect(bx, by, bw, bh)
-    ctx.globalAlpha = 1
-    ctx.globalCompositeOperation = 'source-over'
+  } catch {
+    // tainted canvas (cross-origin source) -- skip the fill, box/label still draw
   }
   ctx.restore()
 }
@@ -159,9 +160,7 @@ function drawBoxShape(ctx: CanvasRenderingContext2D, box: { bx: number; by: numb
 export function updateBlobTrackingOverlay(pass: ShaderPass, effect: AppliedEffect, source: CanvasImageSource, resolution: THREE.Vector2) {
   let state = stateMap.get(pass)
   if (!state) {
-    const sourceBuffer = document.createElement('canvas')
-    const sourceBufferCtx = sourceBuffer.getContext('2d') as CanvasRenderingContext2D
-    state = { detector: new BlobTrackingDetector(), sourceBuffer, sourceBufferCtx }
+    state = { detector: new BlobTrackingDetector() }
     stateMap.set(pass, state)
   }
 
@@ -184,20 +183,6 @@ export function updateBlobTrackingOverlay(pass: ShaderPass, effect: AppliedEffec
   const { ctx, canvas, texture } = getOverlayCanvas(pass, resolution.x, resolution.y)
   ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-  if (fill !== 'None' && blobs.length > 0) {
-    const buf = state.sourceBuffer
-    if (buf.width !== canvas.width || buf.height !== canvas.height) {
-      buf.width = canvas.width
-      buf.height = canvas.height
-    }
-    try {
-      state.sourceBufferCtx.clearRect(0, 0, buf.width, buf.height)
-      state.sourceBufferCtx.drawImage(source, 0, 0, buf.width, buf.height)
-    } catch {
-      // tainted/cross-origin source -- fill modes just no-op below
-    }
-  }
-
   const boxes = blobs.map((b) => ({ bx: b.x * canvas.width, by: b.y * canvas.height, bw: b.w * canvas.width, bh: b.h * canvas.height }))
   const centers: [number, number][] = boxes.map((b) => [b.bx + b.bw / 2, b.by + b.bh / 2])
 
@@ -205,7 +190,7 @@ export function updateBlobTrackingOverlay(pass: ShaderPass, effect: AppliedEffec
 
   blobs.forEach((b, i) => {
     const box = boxes[i]
-    if (fill !== 'None') applyFill(ctx, state!.sourceBuffer, box, fill, color)
+    if (fill !== 'None') applyFill(ctx, source, canvas.width, canvas.height, box, fill, color)
     drawBoxShape(ctx, box, boxStyle, color, strokeWidth)
 
     if (label !== 'None') {

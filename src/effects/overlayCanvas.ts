@@ -31,6 +31,17 @@ export function getOverlayCanvas(pass: ShaderPass, width: number, height: number
   } else if (entry.canvas.width !== w || entry.canvas.height !== h) {
     entry.canvas.width = w
     entry.canvas.height = h
+    // A CanvasTexture reused across a canvas resize can end up sampling
+    // stale GPU-side texture memory on some drivers (observed with Blob
+    // Tracking: the overlay canvas's own 2D pixel content was provably
+    // correct post-resize, yet the composited WebGL output kept showing
+    // content from before the resize, and only recreating the pass --
+    // which allocates a brand new CanvasTexture -- fixed it). Recreating
+    // the texture object itself on every resize forces a full GPU
+    // reallocation instead of a partial update, sidestepping that.
+    entry.texture.dispose()
+    entry.texture = new THREE.CanvasTexture(entry.canvas)
+    entry.texture.colorSpace = THREE.SRGBColorSpace
   }
   return entry
 }

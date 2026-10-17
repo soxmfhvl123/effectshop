@@ -310,7 +310,17 @@ HUD/particle/trail drawing are far easier with the Canvas2D API than GLSL.
 All five instead draw into a per-pass offscreen canvas
 (`src/effects/overlayCanvas.ts`, keyed by `WeakMap<ShaderPass, ...>` so each
 effect instance gets its own) and composite that canvas as a texture with a
-trivial shared alpha-blend shader (`overlayBlend.ts`). Text's canvas is
+trivial shared alpha-blend shader (`overlayBlend.ts`). **Resizing that
+canvas recreates its `THREE.CanvasTexture` rather than reusing one**: a
+reused texture can end up sampling stale GPU-side memory after the backing
+canvas resizes (found via Blob Tracking's `Invert`/`Threshold`/`Tint` fill —
+replacing the source image with one of a different aspect ratio left a
+"ghost" box from the old image rendered on screen indefinitely, even though
+the overlay canvas's own 2D pixel content was provably correct on every
+tick; recreating the pass from scratch, e.g. by hiding and re-showing the
+effect, always fixed it, which is what pointed at the texture object itself
+rather than the drawing code). This affects every overlay effect, not just
+the one that surfaced it. Text's canvas is
 redrawn synchronously whenever its parameters change (cheap). The other four
 need the actual source pixels, which `updatePassUniforms` doesn't have
 access to, so they're driven separately from `EffectRenderer.tsx`:
