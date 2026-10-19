@@ -464,6 +464,9 @@ export const PATTERNS: PlaygroundTool[] = [
       slider('density', 'Density', 0.32, 0, 1),
       slider('size', 'Size', 0.6, 0, 1),
       toggle('lines', 'Rules', true),
+      slider('blink', 'Blink', 0.45, 0, 1),
+      slider('cycle', 'Colour Cycle', 0.6, 0, 1),
+      slider('speed', 'Speed', 1, 0, 4, 0.05),
     ],
     glsl: /* glsl */ `
       vec3 pgMain(vec2 p, vec2 uv) {
@@ -471,15 +474,29 @@ export const PATTERNS: PlaygroundTool[] = [
         vec2 c = floor(g);
         vec2 f = fract(g) - 0.5;
         vec3 col = pgInk(0.0);
+        // Runs on its own clock (Speed) so tokens twinkle without Animate;
+        // Animate speeds it up further.
+        float t = uTime * p_speed * (1.0 + uMotion);
         if (p_lines > 0.5) {
           float edge = abs(fract(g.y) - 0.5);
           col = mix(col, vec3(0.18), step(0.5 - pgPx() * p_cells * 0.7, edge) * step(0.6, pgR(vec2(c.y, 3.3))));
         }
         float presence = mix(p_density, pgSrc(pgUv((c + 0.5) / p_cells)), uSource);
-        if (pgR(c) > presence) return col;
+        // Blinkers re-roll their on/off state every tick at their own rate,
+        // so the grid keeps its density while tokens switch on and off.
+        float blinker = step(pgR(c + 4.4), p_blink);
+        float tick = floor(t * mix(0.8, 3.5, pgR(c + 5.5)) + pgR(c + 6.6) * 10.0) * blinker;
+        if (pgR(c + tick * vec2(1.73, 0.61)) > presence) return col;
         float kind = floor(pgR(c + 1.1) * 6.0);
         float s = mix(0.15, 0.42, p_size);
-        vec3 ink = pgInk(1.0 + floor(pgR(c + 2.2) * max(uInkCount - 1.0, 1.0)));
+        // Cyclers step through the palette, with a short crossfade per step.
+        float n = max(uInkCount - 1.0, 1.0);
+        float ci = floor(pgR(c + 2.2) * n);
+        float cycler = step(pgR(c + 7.7), p_cycle);
+        float ct = t * mix(0.4, 1.6, pgR(c + 8.8)) + pgR(c + 9.9) * 7.0;
+        float k = floor(ct) * cycler;
+        float fk = smoothstep(0.8, 1.0, fract(ct)) * cycler;
+        vec3 ink = mix(pgInk(1.0 + mod(ci + k, n)), pgInk(1.0 + mod(ci + k + 1.0, n)), fk);
         float box = max(abs(f.x), abs(f.y));
         float m;
         if (kind < 0.5) m = step(box, s);
