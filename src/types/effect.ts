@@ -28,13 +28,13 @@ export type EffectCategory =
   | 'Generate'
   | 'Distort'
   | 'Overlay'
-  // Playground generators (see effects/playground) -- shown in their own
+  // Sandbox generators (see effects/sandbox) -- shown in their own
   // sidebar tab rather than the main Effect Library.
-  | 'Backgrounds'
-  | 'Patterns'
-  | 'Posters'
-  | 'Textures'
-  | 'Badges'
+  | 'Grounds'
+  | 'Repeats'
+  | 'Prints'
+  | 'Surfaces'
+  | 'Emblems'
 
 export interface Keyframe {
   time: number // seconds, video timeline position
@@ -72,9 +72,9 @@ export interface EffectDefinition {
   // PASS_FACTORY entry or EffectRenderer.tsx special-casing required, see
   // "Overlay-texture effects" in README for the full picture.
   kind?: 'overlay'
-  // Present on Playground generators: their catalog number and a short
-  // "makes" line, used by the Playground tab's numbered index.
-  playground?: { no: number; makes: string }
+  // Present on Sandbox generators: their catalog number and a short
+  // "makes" line, used by the Sandbox tab's numbered index.
+  sandbox?: { no: number; makes: string }
 }
 
 export interface Preset {

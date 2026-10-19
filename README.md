@@ -22,7 +22,7 @@ all processing runs on the local GPU via Three.js post-processing.
 
 ## Effect Library & Presets thumbnails
 
-Both the left sidebar's Effects (library) and Presets tabs show a 2-column grid
+Both the left sidebar's Effects and Presets tabs show a 2-column grid
 of real rendered previews (`EffectLibrary.tsx`, `PresetList.tsx`), styled
 after effect.app's own library grid (square, rounded, name below) with a
 couple of details borrowed from ref-archive.site (hairline `border-white/10`
@@ -138,7 +138,9 @@ implemented and enabled, for both images and video:
   the "Dither approach" note below. Palette also has a `Custom` option (free-form `inkColor`/
   `paperColor`, not just the three fixed Monochrome/Gameboy/Cyberpunk ramps), added for the
   "Aesthetics 07" batch's one-bit/receipt-style looks.
-- **CRT Screen / Scanlines** (`src/effects/shaders/crt.ts`)
+- **CRT Screen / Scanlines** (`src/effects/shaders/crt.ts`). **Rolling Bar** sends a soft
+  bright band (with a slight horizontal tear) down the tube, and **Flicker** dips the
+  brightness at random. Both are `uTime`-driven, so they move on a still image.
 - **Pixelate** (`src/effects/shaders/pixelate.ts`) — hard mosaic blocks
 - **VHS Tracking** (`src/effects/shaders/vhs.ts`) — scanline jitter, tracking band, tape noise
 - **Posterize** (`src/effects/shaders/posterize.ts`) — flat color-band quantization, no dither
@@ -149,7 +151,9 @@ implemented and enabled, for both images and video:
   circular-tap bloom on bright areas, analytic scanlines, and a slow `uTime`-driven flicker.
 
 **Glitch**
-- **RGB Shift** (`src/effects/shaders/rgbShift.ts`)
+- **RGB Shift** (`src/effects/shaders/rgbShift.ts`). **Movement** animates the split even on
+  a still image: Wobble breathes its width, Spin walks its direction round, and Jitter snaps
+  both to new values 12×/s.
 - **ASCII Art** (`src/effects/shaders/ascii.ts`) — renders real characters via
   a Canvas2D-generated font-atlas texture (`src/effects/asciiAtlas.ts`), not
   a procedural pattern approximation
@@ -254,7 +258,8 @@ Canvas2D-authored texture on top of the source rather than being pure GLSL
 - **Ripple** (`src/effects/shaders/ripple.ts`) — concentric sine waves displacing the sample
   radially outward from the center
 - **Swirl** (`src/effects/shaders/swirl.ts`) — rotates the sample around the center by an angle
-  that falls off (squared, so it's concentrated near the middle) with distance
+  that falls off (squared, so it's concentrated near the middle) with distance. **Movement**:
+  Breathe winds the twist up and unwinds it; Wander circles the eye around the set centre
 - **Pinch / Bulge** (`src/effects/shaders/pinchBulge.ts`) — remaps sample radius by a power curve
   within a radius; positive amount bulges outward (fisheye-like), negative pinches inward
 - **Object Warp** (`src/effects/objectWarpTracking.ts`) — reuses the Swirl shader, but
@@ -297,6 +302,11 @@ defaults), Flash Light (Flash Light + Film Grain & Halation), Receipt Ticket
 (its defaults), One Bit Dither (Dither in 1-bit/custom-palette mode),
 Pink Phosphor (Phosphor Monitor + CRT Screen) — "CRT" from that reference set
 is identical to the existing Retro CRT preset above, so it isn't duplicated.
+Presets that use CRT Screen or RGB Shift now also set their movement controls:
+
+- Retro CRT, Thermal Scan and Pink Phosphor: a gentle rolling bar.
+- 90s Cyberpunk and Datamosh: a jittering split.
+- Warp Drive: a wobbling split.
 
 To add a new effect: write the shader in `src/effects/shaders/`, register a
 `ShaderPass` factory + uniform updater for it in `src/engine/passes.ts`, and
@@ -392,54 +402,100 @@ are pure Canvas2D compositing against a per-pass source-frame buffer
 rather than a dedicated shader + box-array uniform, specifically so it could
 stay on the same generic overlay-blend pass as everything else.
 
-## Playground (generative tools)
+## Sandbox (generative tools)
 
-The left sidebar's tabs are **Effects** (the original library, renamed from
-"Library"), **Playground**, and **Presets**. Playground is a catalogue of 52
-generative tools — Backgrounds, Patterns, Posters, Textures, Badges —
-modelled on the tool index at playgrnd.tools (its numbering, names and
-"makes …" one-liners; the shaders themselves are original). The list is
-styled after that site's index: tool/kind counters, a pill filter with a
-**Random** button, kind chips with counts, numbered rows with tracked
-uppercase names, and newest/oldest/A–Z ordering. Enter adds the first match,
-Esc clears the filter.
+The left sidebar's tabs are **Effects** (the original library), **Sandbox**,
+and **Presets**. Sandbox is a catalogue of 52 generative tools in five kinds:
+Grounds, Repeats, Prints, Surfaces and Emblems. The idea and the index-style
+layout were inspired by playgrnd.tools. The tool names, numbering, "makes …"
+lines, shaders and motion are all original. The list has tool/kind
+counters, a pill filter with a **Random** button, kind chips with counts,
+numbered rows with tracked uppercase names, and 01→52 / 52→01 / A–Z
+ordering. Enter adds the first match, Esc clears the filter.
 
-Generators don't need a photo. **Blank canvas · frame** (in the Playground
-tab and in the empty-canvas drop zone) starts a 1600px-long-side paper-color
+Generators don't need a photo. **Blank canvas · frame** (in the Sandbox tab
+and in the empty-canvas drop zone) starts a 1600px-long-side paper-color
 canvas at 9:16 … 16:9 (`createBlankImage` in `src/lib/media.ts`), and adding
 a tool with nothing loaded creates one at the selected frame automatically.
 On a real photo, tools marked `imageReactive` expose an **Image** slider that
 mixes the photo's luminance into the tool's own field, so the photo comes
 through in the tool's inks and structure.
 
-Everything lives in `src/effects/playground/` and is data-driven, so adding a
+### Motion
+
+Every tool animates as a **seamless loop** rather than a scroll:
+
+- **Animate** turns it on or off. It's on by default; off shows frame 0,
+  which is also what thumbnails show.
+- **Movement** picks one of the tool's own three ways of moving.
+- **Amount** sets how strongly it moves.
+- **Speed · fps**: time is counted in whole frames, so low rates give a
+  stepped, stop-motion feel.
+- **Loop · frames**: the frame counter wraps after this many frames.
+  Everything is built from that counter, so frame `loop` is identical to
+  frame 0, and a video export of one loop length repeats cleanly.
+
+The movements fall into a few families, all helpers in `kit.ts`:
+
+- **Field transforms**:
+  - `sbBreathe`: zoom in and out.
+  - `sbTurn`: rock.
+  - `sbTwirl`: swirl.
+  - `sbDrift`: wander along a closed circle.
+  - `sbChurn`: a time-varying warp that stirs a field in place.
+  - `sbBoil`: a fresh hand-drawn wobble every frame.
+- **Whole-cycle travel** (`sbMarch` / `sbSpin`): stripes, rings, zigzags and
+  beads move an exact whole number of periods or turns per loop. Rings pour
+  outward, ribbons slide in alternating directions, orbits carry their beads
+  round, and the loop still closes.
+- **Per-element beats** (`sbOsc(offset)`): each figure, petal, chain joint
+  or colony sways, pulses or grows on its own phase.
+- **Discrete re-rolls**:
+  - `sbFr`: a fresh random every frame. Used for flicker, twinkle, glitch,
+    and the characters that re-type themselves in Flyer, Codex and Topo.
+  - `sbHop`: a counter that ticks 1–12 times per loop. Used for Shuffle,
+    Split, Tumble and Jump, where elements change one by one.
+
+`sbMv(i)` is movement *i*'s strength: the Amount when it's the chosen
+movement, otherwise 0. That lets a tool's GLSL simply add every movement's
+contribution. Chips also keeps its own always-on Blink / Colour Cycle /
+Speed controls on a free-running clock, separate from the loop.
+
+### Files
+
+Everything lives in `src/effects/sandbox/` and is data-driven, so adding a
 tool touches one file:
 
 - `kit.ts` — one shared GLSL prelude every tool is compiled against.
   - Coordinates: `p` spans −0.5..0.5 on the canvas's short side, so a tool
     looks the same in a 160px thumbnail and at full size.
-  - Seeded hashes and noise: `pgR`/`pgR2`, `pgNoise`, `pgFbm`,
-    `pgDomainWarp`, `pgVoronoi`.
+  - Seeded hashes and noise: `sbR`/`sbR2`, `sbNoise`, `sbFbm`,
+    `sbDomainWarp`, `sbVoronoi`.
   - SDF helpers.
-  - Ink lookup: `pgInk`, `pgInkGrad`, `pgInkStep`.
-  - Bayer dithering: `pgInkD`, `pgDitherMask`.
-  - Image influence (`pgField`).
-  - `pgFinish`, which applies grain, the blend mode and opacity.
-- `backgrounds.ts` / `patterns.ts` / `posters.ts` / `textures.ts` — one
-  `PlaygroundTool` object per tool. Each has `id`, `no`, `name`, `makes`,
-  `kind`, default `inks`, `params` and a GLSL `vec3 pgMain(vec2 p, vec2 uv)`.
+  - The motion helpers above.
+  - Ink lookup: `sbInk`, `sbInkGrad`, `sbInkStep`.
+  - Bayer dithering: `sbInkD`, `sbDitherMask`.
+  - Image influence (`sbField`).
+  - `sbFinish`, which applies grain (re-rolled per animation frame), the
+    blend mode and opacity.
+- `grounds.ts` / `repeats.ts` / `prints.ts` / `surfaces.ts` — one
+  `SandboxTool` object per tool. Each has `id`, `no`, `name`, `makes`,
+  `kind`, default `inks`, `params`, `movements` and a GLSL
+  `vec3 sbMain(vec2 p, vec2 uv)`.
 - `definitions.ts` — turns each tool into a normal `EffectDefinition`
-  (`playground` metadata set, so the Effects tab skips it). It adds the
-  shared controls every tool gets:
+  (`sandbox` metadata set, so the Effects tab skips it). It adds the shared
+  controls every tool gets:
   - **Variation** (seed)
   - **Image** (image-reactive tools only)
-  - **Animate**, **Dither**, **Grain**
+  - The motion group: **Animate**, **Movement**, **Amount**, **Speed**,
+    **Loop**
+  - **Dither**, **Grain**
   - **Blend** (Normal / Multiply / Screen / Overlay)
   - **Inks**
 - `build.ts` — one generic `ShaderPass` factory + uniform updater. A tool
   param `foo` becomes `uniform float p_foo` by convention (toggles → 0/1,
-  selects → option index). That's why `passes.ts` routes every Playground id
-  through `PLAYGROUND_MAP` rather than needing a `PASS_FACTORY` entry each.
+  selects → option index). That's why `passes.ts` routes every Sandbox id
+  through `SANDBOX_MAP` rather than needing a `PASS_FACTORY` entry each.
 - `palettes.ts` — 32 curated palettes for **New colors**, plus rotate/parse
   helpers.
 
@@ -452,13 +508,18 @@ Two parameter types were added for this, both rendered in
 
 The palette is stored as a comma-separated hex string so it fits the
 existing `number | string | boolean` parameter values. Both are discrete
-actions, so they go through the store's new `commitParameter`, which pushes
-an undo step first; slider drags stay on `updateParameter`.
+actions, so they go through the store's `commitParameter`, which pushes an
+undo step first; slider drags stay on `updateParameter`.
 
-To add a tool: append an object to the right kind's file with a unique `pg…`
-id and the next `no`, then write `pgMain` using the kit. It shows up in the
-Playground list, gets a thumbnail, renders, exports and works in presets
-with no other changes.
+To add a tool:
+
+1. Append an object to the right kind's file with a unique `sb…` id, the
+   next `no` and three `movements`.
+2. Write `sbMain` using the kit, reading each movement through `sbMv(0.0)`,
+   `sbMv(1.0)` and `sbMv(2.0)`.
+
+It shows up in the Sandbox list, gets a thumbnail, renders, exports and
+works in presets with no other changes.
 
 ## Assumptions & notable implementation choices
 

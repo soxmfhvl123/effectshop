@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { EffectLibrary } from './EffectLibrary'
-import { PlaygroundList } from './PlaygroundList'
+import { SandboxList } from './SandboxList'
 import { PresetList } from './PresetList'
 
 const TABS = [
   { id: 'library', label: 'Effects' },
-  { id: 'playground', label: 'Playground' },
+  { id: 'sandbox', label: 'Sandbox' },
   { id: 'presets', label: 'Presets' },
 ] as const
 
@@ -29,7 +29,7 @@ export function LeftSidebar() {
         ))}
       </div>
       {tab === 'library' && <EffectLibrary />}
-      {tab === 'playground' && <PlaygroundList />}
+      {tab === 'sandbox' && <SandboxList />}
       {tab === 'presets' && <PresetList />}
     </aside>
   )

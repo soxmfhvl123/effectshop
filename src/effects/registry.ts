@@ -1,5 +1,5 @@
 import type { EffectDefinition } from '../types/effect'
-import { PLAYGROUND_DEFINITIONS } from './playground'
+import { SANDBOX_DEFINITIONS } from './sandbox'
 
 // Every entry below has a wired GLSL pass in engine/passes.ts and renders
 // live (implemented: true). `implemented: false` remains supported by the
@@ -75,6 +75,8 @@ const CORE_EFFECTS: EffectDefinition[] = [
       { id: 'scanlineCount', name: 'Scanline Count', type: 'slider', value: 240, min: 50, max: 500, step: 1 },
       { id: 'scanlineIntensity', name: 'Scanline Intensity', type: 'slider', value: 0.35, min: 0, max: 1, step: 0.01 },
       { id: 'vignette', name: 'Vignette', type: 'slider', value: 0.4, min: 0, max: 1, step: 0.01 },
+      { id: 'roll', name: 'Rolling Bar', type: 'slider', value: 0, min: 0, max: 1, step: 0.01 },
+      { id: 'flicker', name: 'Flicker', type: 'slider', value: 0, min: 0, max: 1, step: 0.01 },
     ],
   },
   {
@@ -87,6 +89,19 @@ const CORE_EFFECTS: EffectDefinition[] = [
       { id: 'amount', name: 'Amount', type: 'slider', value: 4, min: 0, max: 50, step: 1 },
       { id: 'angle', name: 'Angle', type: 'slider', value: 0, min: 0, max: 360, step: 1 },
       { id: 'radialDistortion', name: 'Radial Distortion', type: 'toggle', value: false },
+      {
+        id: 'movement',
+        name: 'Movement',
+        type: 'select',
+        value: 'still',
+        options: [
+          { label: 'Still', value: 'still' },
+          { label: 'Wobble', value: 'wobble' },
+          { label: 'Spin', value: 'spin' },
+          { label: 'Jitter', value: 'jitter' },
+        ],
+      },
+      { id: 'moveAmount', name: 'Movement Amount', type: 'slider', value: 0.6, min: 0, max: 1, step: 0.01 },
     ],
   },
   {
@@ -495,6 +510,18 @@ const CORE_EFFECTS: EffectDefinition[] = [
       { id: 'radius', name: 'Radius', type: 'slider', value: 150, min: 20, max: 400, step: 5 },
       { id: 'centerX', name: 'Center X', type: 'slider', value: 0.5, min: 0, max: 1, step: 0.01 },
       { id: 'centerY', name: 'Center Y', type: 'slider', value: 0.5, min: 0, max: 1, step: 0.01 },
+      {
+        id: 'movement',
+        name: 'Movement',
+        type: 'select',
+        value: 'still',
+        options: [
+          { label: 'Still', value: 'still' },
+          { label: 'Breathe', value: 'breathe' },
+          { label: 'Wander', value: 'wander' },
+        ],
+      },
+      { id: 'moveAmount', name: 'Movement Amount', type: 'slider', value: 0.6, min: 0, max: 1, step: 0.01 },
     ],
   },
   {
@@ -815,10 +842,10 @@ const CORE_EFFECTS: EffectDefinition[] = [
   },
 ]
 
-// Playground generators are full registry citizens (pipeline, presets,
+// Sandbox generators are full registry citizens (pipeline, presets,
 // thumbnails, undo all work the same), but they're browsed from their own
-// sidebar tab -- EffectLibrary filters them out via `playground`.
-export const EFFECT_REGISTRY: EffectDefinition[] = [...CORE_EFFECTS, ...PLAYGROUND_DEFINITIONS]
+// sidebar tab -- EffectLibrary filters them out via `sandbox`.
+export const EFFECT_REGISTRY: EffectDefinition[] = [...CORE_EFFECTS, ...SANDBOX_DEFINITIONS]
 
 export const EFFECT_CATEGORIES = [
   'All',

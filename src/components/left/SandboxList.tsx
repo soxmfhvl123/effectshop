@@ -1,12 +1,12 @@
 import { Dices, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { PLAYGROUND_KINDS, PLAYGROUND_TOOLS } from '../../effects/playground'
-import type { PlaygroundKind, PlaygroundTool } from '../../effects/playground/types'
+import { SANDBOX_KINDS, SANDBOX_TOOLS } from '../../effects/sandbox'
+import type { SandboxKind, SandboxTool } from '../../effects/sandbox/types'
 import { getEffectThumbnail } from '../../effects/thumbnailRenderer'
 import { createBlankImage, FRAME_RATIOS, type FrameRatio } from '../../lib/media'
 import { useEffectStore } from '../../store/useEffectStore'
 
-type Order = 'newest' | 'oldest' | 'az'
+type Order = 'asc' | 'desc' | 'az'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
@@ -21,7 +21,7 @@ function useStaggeredThumbnail(effectId: string, index: number): string | null {
   return url
 }
 
-function ToolRow({ tool, index, onAdd }: { tool: PlaygroundTool; index: number; onAdd: () => void }) {
+function ToolRow({ tool, index, onAdd }: { tool: SandboxTool; index: number; onAdd: () => void }) {
   const thumb = useStaggeredThumbnail(tool.id, index)
   return (
     <button
@@ -42,30 +42,30 @@ function ToolRow({ tool, index, onAdd }: { tool: PlaygroundTool; index: number; 
   )
 }
 
-export function PlaygroundList() {
+export function SandboxList() {
   const [query, setQuery] = useState('')
-  const [kind, setKind] = useState<PlaygroundKind | 'All'>('All')
-  const [order, setOrder] = useState<Order>('newest')
+  const [kind, setKind] = useState<SandboxKind | 'All'>('All')
+  const [order, setOrder] = useState<Order>('asc')
   const [ratio, setRatio] = useState<FrameRatio>('4:5')
   const addEffect = useEffectStore((s) => s.addEffect)
   const setSourceImage = useEffectStore((s) => s.setSourceImage)
   const mediaType = useEffectStore((s) => s.mediaType)
 
   const counts = useMemo(() => {
-    const c: Record<string, number> = { All: PLAYGROUND_TOOLS.length }
-    for (const t of PLAYGROUND_TOOLS) c[t.kind] = (c[t.kind] ?? 0) + 1
+    const c: Record<string, number> = { All: SANDBOX_TOOLS.length }
+    for (const t of SANDBOX_TOOLS) c[t.kind] = (c[t.kind] ?? 0) + 1
     return c
   }, [])
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const list = PLAYGROUND_TOOLS.filter((t) => {
+    const list = SANDBOX_TOOLS.filter((t) => {
       if (kind !== 'All' && t.kind !== kind) return false
       if (q && !t.name.toLowerCase().includes(q) && !t.makes.toLowerCase().includes(q)) return false
       return true
     })
-    if (order === 'newest') return [...list].sort((a, b) => b.no - a.no)
-    if (order === 'oldest') return [...list].sort((a, b) => a.no - b.no)
+    if (order === 'asc') return [...list].sort((a, b) => a.no - b.no)
+    if (order === 'desc') return [...list].sort((a, b) => b.no - a.no)
     return [...list].sort((a, b) => a.name.localeCompare(b.name))
   }, [query, kind, order])
 
@@ -76,7 +76,7 @@ export function PlaygroundList() {
 
   // Generators don't need a photo: with nothing loaded, start a blank
   // canvas at the chosen frame first so the tool has something to draw on.
-  const add = async (tool: PlaygroundTool) => {
+  const add = async (tool: SandboxTool) => {
     if (mediaType === null) setSourceImage(await createBlankImage(ratio))
     addEffect(tool.id)
   }
@@ -91,9 +91,9 @@ export function PlaygroundList() {
       <div className="space-y-3 border-b border-zinc-800 p-3">
         <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5 font-mono text-[10px] uppercase tracking-[0.2em]">
           <span className="text-zinc-600">Tools</span>
-          <span className="text-zinc-300">{pad(PLAYGROUND_TOOLS.length)}</span>
+          <span className="text-zinc-300">{pad(SANDBOX_TOOLS.length)}</span>
           <span className="text-zinc-600">Kinds</span>
-          <span className="text-zinc-300">{pad(PLAYGROUND_KINDS.length)}</span>
+          <span className="text-zinc-300">{pad(SANDBOX_KINDS.length)}</span>
         </div>
 
         <div className="flex items-center gap-1.5 rounded-full border border-zinc-700 py-1 pl-3 pr-1">
@@ -119,7 +119,7 @@ export function PlaygroundList() {
         </div>
 
         <div className="flex flex-wrap gap-1">
-          {(['All', ...PLAYGROUND_KINDS] as const).map((k) => (
+          {(['All', ...SANDBOX_KINDS] as const).map((k) => (
             <button
               key={k}
               type="button"
@@ -157,14 +157,14 @@ export function PlaygroundList() {
       <div className="flex shrink-0 items-center justify-between gap-2 whitespace-nowrap border-b border-zinc-800 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-600">
         <span>No. · Tool · makes</span>
         <span className="flex gap-2">
-          {(['newest', 'oldest', 'az'] as const).map((o) => (
+          {(['asc', 'desc', 'az'] as const).map((o) => (
             <button
               key={o}
               type="button"
               onClick={() => setOrder(o)}
               className={order === o ? 'text-zinc-200' : 'text-zinc-600 hover:text-zinc-400'}
             >
-              {o === 'az' ? 'A–Z' : o}
+              {o === 'az' ? 'A–Z' : o === 'asc' ? `01→${pad(SANDBOX_TOOLS.length)}` : `${pad(SANDBOX_TOOLS.length)}→01`}
             </button>
           ))}
         </span>
@@ -176,7 +176,7 @@ export function PlaygroundList() {
           <ToolRow key={tool.id} tool={tool} index={i} onAdd={() => add(tool)} />
         ))}
         <p className="px-3 py-3 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-700">
-          Showing {pad(visible.length)} / {pad(PLAYGROUND_TOOLS.length)} · Enter — add first · Esc — clear
+          Showing {pad(visible.length)} / {pad(SANDBOX_TOOLS.length)} · Enter — add first · Esc — clear
         </p>
       </div>
     </div>

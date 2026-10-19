@@ -49,8 +49,8 @@ import { flashLightFragmentShader, flashLightVertexShader } from '../effects/sha
 import { datamoshFragmentShader, datamoshVertexShader } from '../effects/shaders/datamosh'
 import { getEffectDefinition } from '../effects/registry'
 import { OVERLAY_UPDATERS } from '../effects/overlayRegistry'
-import { PLAYGROUND_MAP } from '../effects/playground'
-import { createPlaygroundPass, updatePlaygroundUniforms } from '../effects/playground/build'
+import { SANDBOX_MAP } from '../effects/sandbox'
+import { createSandboxPass, updateSandboxUniforms } from '../effects/sandbox/build'
 
 const num = (v: unknown, fallback = 0) => (typeof v === 'number' ? v : Number(v) || fallback)
 
@@ -105,6 +105,9 @@ const PASS_FACTORY: Record<string, () => ShaderPass> = {
         uScanlineCount: { value: 240 },
         uScanlineIntensity: { value: 0.35 },
         uVignette: { value: 0.4 },
+        uRoll: { value: 0 },
+        uFlicker: { value: 0 },
+        uTime: { value: 0 },
         uOpacity: { value: 1 },
       },
       vertexShader: crtVertexShader,
@@ -134,6 +137,9 @@ const PASS_FACTORY: Record<string, () => ShaderPass> = {
         uAmount: { value: 4 },
         uAngle: { value: 0 },
         uRadial: { value: 0 },
+        uTime: { value: 0 },
+        uMove: { value: 0 },
+        uMoveAmt: { value: 0.6 },
         uOpacity: { value: 1 },
       },
       vertexShader: rgbShiftVertexShader,
@@ -558,6 +564,9 @@ const PASS_FACTORY: Record<string, () => ShaderPass> = {
         uRadius: { value: 150 },
         uCenterX: { value: 0.5 },
         uCenterY: { value: 0.5 },
+        uTime: { value: 0 },
+        uMove: { value: 0 },
+        uMoveAmt: { value: 0.6 },
         uOpacity: { value: 1 },
       },
       vertexShader: swirlVertexShader,
@@ -633,6 +642,10 @@ const PASS_FACTORY: Record<string, () => ShaderPass> = {
         uRadius: { value: 160 },
         uCenterX: { value: 0.5 },
         uCenterY: { value: 0.5 },
+        // shares the swirl shader; its Movement stays at Still here
+        uTime: { value: 0 },
+        uMove: { value: 0 },
+        uMoveAmt: { value: 0 },
         uOpacity: { value: 1 },
       },
       vertexShader: swirlVertexShader,
@@ -812,13 +825,13 @@ function isGenericOverlayEffect(effectId: string): boolean {
 }
 
 export function isEffectRenderable(effectId: string): boolean {
-  return effectId in PASS_FACTORY || isGenericOverlayEffect(effectId) || effectId in PLAYGROUND_MAP
+  return effectId in PASS_FACTORY || isGenericOverlayEffect(effectId) || effectId in SANDBOX_MAP
 }
 
 export function createPass(effect: AppliedEffect): ShaderPass | null {
-  const tool = PLAYGROUND_MAP[effect.effectId]
+  const tool = SANDBOX_MAP[effect.effectId]
   if (tool) {
-    const pass = createPlaygroundPass(tool)
+    const pass = createSandboxPass(tool)
     updatePassUniforms(pass, effect, new THREE.Vector2(1, 1))
     return pass
   }
@@ -843,9 +856,9 @@ export function updatePassUniforms(pass: ShaderPass, effect: AppliedEffect, reso
   if (u.uResolution) u.uResolution.value.copy(resolution)
   if (u.uOpacity) u.uOpacity.value = effect.opacity
 
-  const tool = PLAYGROUND_MAP[effect.effectId]
+  const tool = SANDBOX_MAP[effect.effectId]
   if (tool) {
-    updatePlaygroundUniforms(pass, effect, tool)
+    updateSandboxUniforms(pass, effect, tool)
     return
   }
 
@@ -861,6 +874,8 @@ export function updatePassUniforms(pass: ShaderPass, effect: AppliedEffect, reso
       u.uScanlineCount.value = num(effect.parameters.scanlineCount, 240)
       u.uScanlineIntensity.value = num(effect.parameters.scanlineIntensity, 0.35)
       u.uVignette.value = num(effect.parameters.vignette, 0.4)
+      u.uRoll.value = num(effect.parameters.roll, 0)
+      u.uFlicker.value = num(effect.parameters.flicker, 0)
       break
     case 'dither': {
       const mapping = DITHER_TYPE_MAP[String(effect.parameters.type)] ?? DITHER_TYPE_MAP.bayer4
@@ -876,6 +891,8 @@ export function updatePassUniforms(pass: ShaderPass, effect: AppliedEffect, reso
       u.uAmount.value = num(effect.parameters.amount, 4)
       u.uAngle.value = num(effect.parameters.angle, 0)
       u.uRadial.value = effect.parameters.radialDistortion ? 1 : 0
+      u.uMove.value = Math.max(0, ['still', 'wobble', 'spin', 'jitter'].indexOf(String(effect.parameters.movement)))
+      u.uMoveAmt.value = num(effect.parameters.moveAmount, 0.6)
       break
     case 'ascii': {
       const atlas = getCharAtlas(String(effect.parameters.charSet ?? 'standard'))
@@ -1053,6 +1070,8 @@ export function updatePassUniforms(pass: ShaderPass, effect: AppliedEffect, reso
       u.uRadius.value = num(effect.parameters.radius, 150)
       u.uCenterX.value = num(effect.parameters.centerX, 0.5)
       u.uCenterY.value = num(effect.parameters.centerY, 0.5)
+      u.uMove.value = Math.max(0, ['still', 'breathe', 'wander'].indexOf(String(effect.parameters.movement)))
+      u.uMoveAmt.value = num(effect.parameters.moveAmount, 0.6)
       break
     case 'pinchBulge':
       u.uAmount.value = num(effect.parameters.amount, 0.6)

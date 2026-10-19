@@ -18,19 +18,27 @@ export const swirlFragmentShader = /* glsl */ `
   uniform float uRadius; // falloff radius, px
   uniform float uCenterX;
   uniform float uCenterY;
+  uniform float uTime;
+  uniform float uMove;    // 0 still, 1 breathe, 2 wander
+  uniform float uMoveAmt; // 0..1
   uniform float uOpacity;
   varying vec2 vUv;
 
   void main() {
     vec4 srcColor = texture2D(tDiffuse, vUv);
     vec2 px = vUv * uResolution;
-    vec2 centerPx = vec2(uCenterX, uCenterY) * uResolution;
+    vec2 center = vec2(uCenterX, uCenterY);
+    // Wander: the eye of the whirlpool circles its set centre
+    if (uMove > 1.5) center += 0.08 * uMoveAmt * vec2(cos(uTime * 0.9), sin(uTime * 1.3));
+    vec2 centerPx = center * uResolution;
     vec2 delta = px - centerPx;
     float dist = length(delta);
     float radius = max(uRadius, 1.0);
 
     float t = clamp(1.0 - dist / radius, 0.0, 1.0);
-    float angle = radians(uAngle) * t * t;
+    // Breathe: the twist winds up and unwinds
+    float twist = uMove > 0.5 && uMove < 1.5 ? 1.0 + uMoveAmt * sin(uTime * 1.6) : 1.0;
+    float angle = radians(uAngle) * twist * t * t;
     float s = sin(angle);
     float c = cos(angle);
     vec2 rotated = vec2(delta.x * c - delta.y * s, delta.x * s + delta.y * c);
