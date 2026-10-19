@@ -58,6 +58,7 @@ export function EffectLibrary() {
 
   const filtered = useMemo(() => {
     return EFFECT_REGISTRY.filter((e) => {
+      if (e.playground) return false
       if (category !== 'All' && e.category !== (category as EffectCategory)) return false
       if (query && !e.name.toLowerCase().includes(query.toLowerCase())) return false
       return true

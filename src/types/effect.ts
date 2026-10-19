@@ -2,7 +2,11 @@
 // AppliedEffect / EffectParameter mirror the PRD's TypeScript spec exactly;
 // everything else here is supporting scaffolding needed to make that spec runnable.
 
-export type ParamType = 'slider' | 'select' | 'toggle' | 'color' | 'text'
+// 'seed' = an integer variation number with a "New variation" button.
+// 'palette' = a comma-separated list of hex colors ("#aabbcc,#112233"),
+// edited as a row of swatches -- kept as a plain string so it fits the
+// existing number|string|boolean parameter value type everywhere else.
+export type ParamType = 'slider' | 'select' | 'toggle' | 'color' | 'text' | 'seed' | 'palette'
 
 export interface EffectParameter {
   id: string
@@ -24,6 +28,13 @@ export type EffectCategory =
   | 'Generate'
   | 'Distort'
   | 'Overlay'
+  // Playground generators (see effects/playground) -- shown in their own
+  // sidebar tab rather than the main Effect Library.
+  | 'Backgrounds'
+  | 'Patterns'
+  | 'Posters'
+  | 'Textures'
+  | 'Badges'
 
 export interface Keyframe {
   time: number // seconds, video timeline position
@@ -61,6 +72,9 @@ export interface EffectDefinition {
   // PASS_FACTORY entry or EffectRenderer.tsx special-casing required, see
   // "Overlay-texture effects" in README for the full picture.
   kind?: 'overlay'
+  // Present on Playground generators: their catalog number and a short
+  // "makes" line, used by the Playground tab's numbered index.
+  playground?: { no: number; makes: string }
 }
 
 export interface Preset {

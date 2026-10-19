@@ -49,6 +49,8 @@ import { flashLightFragmentShader, flashLightVertexShader } from '../effects/sha
 import { datamoshFragmentShader, datamoshVertexShader } from '../effects/shaders/datamosh'
 import { getEffectDefinition } from '../effects/registry'
 import { OVERLAY_UPDATERS } from '../effects/overlayRegistry'
+import { PLAYGROUND_MAP } from '../effects/playground'
+import { createPlaygroundPass, updatePlaygroundUniforms } from '../effects/playground/build'
 
 const num = (v: unknown, fallback = 0) => (typeof v === 'number' ? v : Number(v) || fallback)
 
@@ -810,10 +812,16 @@ function isGenericOverlayEffect(effectId: string): boolean {
 }
 
 export function isEffectRenderable(effectId: string): boolean {
-  return effectId in PASS_FACTORY || isGenericOverlayEffect(effectId)
+  return effectId in PASS_FACTORY || isGenericOverlayEffect(effectId) || effectId in PLAYGROUND_MAP
 }
 
 export function createPass(effect: AppliedEffect): ShaderPass | null {
+  const tool = PLAYGROUND_MAP[effect.effectId]
+  if (tool) {
+    const pass = createPlaygroundPass(tool)
+    updatePassUniforms(pass, effect, new THREE.Vector2(1, 1))
+    return pass
+  }
   const factory = PASS_FACTORY[effect.effectId]
   if (!factory) {
     if (!isGenericOverlayEffect(effect.effectId)) return null
@@ -834,6 +842,12 @@ export function updatePassUniforms(pass: ShaderPass, effect: AppliedEffect, reso
   if (!u) return
   if (u.uResolution) u.uResolution.value.copy(resolution)
   if (u.uOpacity) u.uOpacity.value = effect.opacity
+
+  const tool = PLAYGROUND_MAP[effect.effectId]
+  if (tool) {
+    updatePlaygroundUniforms(pass, effect, tool)
+    return
+  }
 
   switch (effect.effectId) {
     case 'halftone':

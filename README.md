@@ -22,7 +22,7 @@ all processing runs on the local GPU via Three.js post-processing.
 
 ## Effect Library & Presets thumbnails
 
-Both the left sidebar's Effect Library and Presets tabs show a 2-column grid
+Both the left sidebar's Effects (library) and Presets tabs show a 2-column grid
 of real rendered previews (`EffectLibrary.tsx`, `PresetList.tsx`), styled
 after effect.app's own library grid (square, rounded, name below) with a
 couple of details borrowed from ref-archive.site (hairline `border-white/10`
@@ -391,6 +391,74 @@ are pure Canvas2D compositing against a per-pass source-frame buffer
 (`difference` blend, a thresholded sub-`ImageData`, or `source-atop` tint)
 rather than a dedicated shader + box-array uniform, specifically so it could
 stay on the same generic overlay-blend pass as everything else.
+
+## Playground (generative tools)
+
+The left sidebar's tabs are **Effects** (the original library, renamed from
+"Library"), **Playground**, and **Presets**. Playground is a catalogue of 52
+generative tools — Backgrounds, Patterns, Posters, Textures, Badges —
+modelled on the tool index at playgrnd.tools (its numbering, names and
+"makes …" one-liners; the shaders themselves are original). The list is
+styled after that site's index: tool/kind counters, a pill filter with a
+**Random** button, kind chips with counts, numbered rows with tracked
+uppercase names, and newest/oldest/A–Z ordering. Enter adds the first match,
+Esc clears the filter.
+
+Generators don't need a photo. **Blank canvas · frame** (in the Playground
+tab and in the empty-canvas drop zone) starts a 1600px-long-side paper-color
+canvas at 9:16 … 16:9 (`createBlankImage` in `src/lib/media.ts`), and adding
+a tool with nothing loaded creates one at the selected frame automatically.
+On a real photo, tools marked `imageReactive` expose an **Image** slider that
+mixes the photo's luminance into the tool's own field, so the photo comes
+through in the tool's inks and structure.
+
+Everything lives in `src/effects/playground/` and is data-driven, so adding a
+tool touches one file:
+
+- `kit.ts` — one shared GLSL prelude every tool is compiled against.
+  - Coordinates: `p` spans −0.5..0.5 on the canvas's short side, so a tool
+    looks the same in a 160px thumbnail and at full size.
+  - Seeded hashes and noise: `pgR`/`pgR2`, `pgNoise`, `pgFbm`,
+    `pgDomainWarp`, `pgVoronoi`.
+  - SDF helpers.
+  - Ink lookup: `pgInk`, `pgInkGrad`, `pgInkStep`.
+  - Bayer dithering: `pgInkD`, `pgDitherMask`.
+  - Image influence (`pgField`).
+  - `pgFinish`, which applies grain, the blend mode and opacity.
+- `backgrounds.ts` / `patterns.ts` / `posters.ts` / `textures.ts` — one
+  `PlaygroundTool` object per tool. Each has `id`, `no`, `name`, `makes`,
+  `kind`, default `inks`, `params` and a GLSL `vec3 pgMain(vec2 p, vec2 uv)`.
+- `definitions.ts` — turns each tool into a normal `EffectDefinition`
+  (`playground` metadata set, so the Effects tab skips it). It adds the
+  shared controls every tool gets:
+  - **Variation** (seed)
+  - **Image** (image-reactive tools only)
+  - **Animate**, **Dither**, **Grain**
+  - **Blend** (Normal / Multiply / Screen / Overlay)
+  - **Inks**
+- `build.ts` — one generic `ShaderPass` factory + uniform updater. A tool
+  param `foo` becomes `uniform float p_foo` by convention (toggles → 0/1,
+  selects → option index). That's why `passes.ts` routes every Playground id
+  through `PLAYGROUND_MAP` rather than needing a `PASS_FACTORY` entry each.
+- `palettes.ts` — 32 curated palettes for **New colors**, plus rotate/parse
+  helpers.
+
+Two parameter types were added for this, both rendered in
+`ParameterInspector.tsx`:
+
+- `seed`: a "New variation" reroll button plus a numeric field.
+- `palette`: up to 8 color swatches with add/remove, **New colors** and
+  **Rotate**.
+
+The palette is stored as a comma-separated hex string so it fits the
+existing `number | string | boolean` parameter values. Both are discrete
+actions, so they go through the store's new `commitParameter`, which pushes
+an undo step first; slider drags stay on `updateParameter`.
+
+To add a tool: append an object to the right kind's file with a unique `pg…`
+id and the next `no`, then write `pgMain` using the kit. It shows up in the
+Playground list, gets a thumbnail, renders, exports and works in presets
+with no other changes.
 
 ## Assumptions & notable implementation choices
 

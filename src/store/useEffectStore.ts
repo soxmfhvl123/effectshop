@@ -61,6 +61,9 @@ export interface EffectShopState {
   setEffectOpacity: (instanceId: string, opacity: number) => void
   reorderEffects: (startIndex: number, endIndex: number) => void
   updateParameter: (instanceId: string, paramId: string, value: number | string | boolean) => void
+  // Like updateParameter, but undoable -- for discrete one-shot changes
+  // (a new variation, a palette shuffle) rather than continuous drags.
+  commitParameter: (instanceId: string, paramId: string, value: number | string | boolean) => void
   resetParameter: (instanceId: string, paramId: string) => void
   selectInstance: (instanceId: string | null) => void
   loadPreset: (preset: Preset) => void
@@ -253,6 +256,11 @@ export const useEffectStore = create<EffectShopState>((set, get) => ({
         return { ...e, parameters: { ...e.parameters, [paramId]: value } }
       }),
     }))
+  },
+
+  commitParameter: (instanceId, paramId, value) => {
+    pushHistory(get, set)
+    get().updateParameter(instanceId, paramId, value)
   },
 
   resetParameter: (instanceId, paramId) => {

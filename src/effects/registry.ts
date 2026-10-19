@@ -1,10 +1,11 @@
 import type { EffectDefinition } from '../types/effect'
+import { PLAYGROUND_DEFINITIONS } from './playground'
 
 // Every entry below has a wired GLSL pass in engine/passes.ts and renders
 // live (implemented: true). `implemented: false` remains supported by the
 // Library UI (disabled with a "Soon" badge) for any future effect that's
 // listed before its shader ships.
-export const EFFECT_REGISTRY: EffectDefinition[] = [
+const CORE_EFFECTS: EffectDefinition[] = [
   {
     id: 'halftone',
     name: 'Halftone Screen',
@@ -813,6 +814,11 @@ export const EFFECT_REGISTRY: EffectDefinition[] = [
     ],
   },
 ]
+
+// Playground generators are full registry citizens (pipeline, presets,
+// thumbnails, undo all work the same), but they're browsed from their own
+// sidebar tab -- EffectLibrary filters them out via `playground`.
+export const EFFECT_REGISTRY: EffectDefinition[] = [...CORE_EFFECTS, ...PLAYGROUND_DEFINITIONS]
 
 export const EFFECT_CATEGORIES = [
   'All',

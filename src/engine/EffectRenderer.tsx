@@ -6,7 +6,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import type { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import { useEffectStore, type EffectShopState } from '../store/useEffectStore'
 import { createPass, isEffectRenderable, tickPassTime, updatePassUniforms } from './passes'
-import { loadImageFromFile, loadVideoFromFile, isImageFile, isVideoFile } from '../lib/media'
+import { createBlankImage, FRAME_RATIOS, loadImageFromFile, loadVideoFromFile, isImageFile, isVideoFile } from '../lib/media'
 import { downloadBlob } from '../lib/download'
 import { evaluateEffectAtTime } from '../lib/keyframes'
 import { updateBlobTrackerOverlay } from '../effects/blobTrackerOverlay'
@@ -697,18 +697,35 @@ export const EffectRenderer = forwardRef<EffectRendererHandle, Props>(function E
       onDrop={handleDrop}
     >
       {!hasMedia && (
-        <label className="z-10 flex w-80 cursor-pointer flex-col items-center gap-3 rounded border border-dashed border-zinc-700 bg-zinc-950/80 px-8 py-12 text-center transition-colors hover:border-zinc-500">
-          <span className="font-sans text-sm uppercase tracking-widest text-zinc-400">
-            {isDragOver ? 'Drop to load' : 'Drop an image or video, or click to upload'}
-          </span>
-          <span className="text-xs text-zinc-600">PNG, JPG, WEBP · MP4, WEBM, MOV</span>
-          <input
-            type="file"
-            accept="image/*,video/*"
-            className="hidden"
-            onChange={(e) => handleFiles(e.target.files)}
-          />
-        </label>
+        <div className="z-10 flex w-80 flex-col gap-3">
+          <label className="flex cursor-pointer flex-col items-center gap-3 rounded border border-dashed border-zinc-700 bg-zinc-950/80 px-8 py-12 text-center transition-colors hover:border-zinc-500">
+            <span className="font-sans text-sm uppercase tracking-widest text-zinc-400">
+              {isDragOver ? 'Drop to load' : 'Drop an image or video, or click to upload'}
+            </span>
+            <span className="text-xs text-zinc-600">PNG, JPG, WEBP · MP4, WEBM, MOV</span>
+            <input
+              type="file"
+              accept="image/*,video/*"
+              className="hidden"
+              onChange={(e) => handleFiles(e.target.files)}
+            />
+          </label>
+          <div className="flex flex-col items-center gap-2 rounded border border-zinc-800 bg-zinc-950/80 px-4 py-3">
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">Or start blank · frame</span>
+            <div className="flex flex-wrap justify-center gap-1">
+              {FRAME_RATIOS.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={async () => setSourceImage(await createBlankImage(r))}
+                  className="rounded-full border border-zinc-800 px-2 py-0.5 font-mono text-[10px] tracking-wider text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* This host mounts unconditionally (even before media is loaded) so the
