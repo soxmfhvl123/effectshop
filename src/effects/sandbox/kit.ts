@@ -181,12 +181,56 @@ export const SB_KIT = /* glsl */ `
     for (int i = 1; i < 8; i++) { if (float(i) == k) c = uInks[i]; }
     return c;
   }
+  // --- OKLab, for gradients ---
+  // Mixing in OKLab keeps blends perceptually even -- no muddy grey middle
+  // between complementary inks the way a straight RGB mix gives. The inks
+  // arrive as linear sRGB, which is exactly what OKLab expects.
+  vec3 sbToOk(vec3 c) {
+    c = max(c, 0.0);
+    vec3 lms = vec3(
+      0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b,
+      0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b,
+      0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b);
+    lms = pow(lms, vec3(1.0 / 3.0));
+    return vec3(
+      0.2104542553 * lms.x + 0.7936177850 * lms.y - 0.0040720468 * lms.z,
+      1.9779984951 * lms.x - 2.4285922050 * lms.y + 0.4505937099 * lms.z,
+      0.0259040371 * lms.x + 0.7827717662 * lms.y - 0.8086757660 * lms.z);
+  }
+  vec3 sbFromOk(vec3 c) {
+    vec3 lms = vec3(
+      c.x + 0.3963377774 * c.y + 0.2158037573 * c.z,
+      c.x - 0.1055613458 * c.y - 0.0638541728 * c.z,
+      c.x - 0.0894841775 * c.y - 1.2914855480 * c.z);
+    lms = lms * lms * lms;
+    return max(vec3(
+      4.0767416621 * lms.x - 3.3077115913 * lms.y + 0.2309699292 * lms.z,
+      -1.2684380046 * lms.x + 2.6097574011 * lms.y - 0.3413193965 * lms.z,
+      -0.0041960863 * lms.x - 0.7034186147 * lms.y + 1.7076147010 * lms.z), 0.0);
+  }
+  vec3 sbMixOk(vec3 a, vec3 b, float t) { return sbFromOk(mix(sbToOk(a), sbToOk(b), t)); }
+
   vec3 sbInkStep(float t) { return sbInk(floor(clamp(t, 0.0, 0.9999) * max(uInkCount, 1.0))); }
   vec3 sbInkGrad(float t) {
     float n = max(uInkCount - 1.0, 1.0);
     float x = clamp(t, 0.0, 1.0) * n;
     float i = min(floor(x), n - 1.0);
     return mix(sbInk(i), sbInk(i + 1.0), x - i);
+  }
+  // The inks as one smooth OKLab ramp, first to last.
+  vec3 sbInkOk(float t) {
+    float n = max(uInkCount - 1.0, 1.0);
+    float x = clamp(t, 0.0, 1.0) * n;
+    float i = min(floor(x), n - 1.0);
+    return sbMixOk(sbInk(i), sbInk(i + 1.0), x - i);
+  }
+  // The inks as a closed loop -- the last eases back into the first -- so a
+  // gradient can flow through them forever (and a whole-cycle shift is a
+  // seamless loop).
+  vec3 sbInkLoop(float t) {
+    float x = fract(t) * max(uInkCount, 1.0);
+    float i = floor(x);
+    return sbMixOk(sbInk(i), sbInk(i + 1.0), smoothstep(0.0, 1.0, x - i));
   }
 
   // --- ordered dither ---

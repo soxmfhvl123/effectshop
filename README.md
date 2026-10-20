@@ -405,12 +405,12 @@ stay on the same generic overlay-blend pass as everything else.
 ## Sandbox (generative tools)
 
 The left sidebar's tabs are **Effects** (the original library), **Sandbox**,
-and **Presets**. Sandbox is a catalogue of 52 generative tools in five kinds:
-Grounds, Repeats, Prints, Surfaces and Emblems. The idea and the index-style
+and **Presets**. Sandbox is a catalogue of 63 generative tools in six kinds:
+Gradients, Grounds, Repeats, Prints, Surfaces and Emblems. The idea and the index-style
 layout were inspired by playgrnd.tools. The tool names, numbering, "makes …"
 lines, shaders and motion are all original. The list has tool/kind
 counters, a pill filter with a **Random** button, kind chips with counts,
-numbered rows with tracked uppercase names, and 01→52 / 52→01 / A–Z
+numbered rows with tracked uppercase names, and 01→63 / 63→01 / A–Z
 ordering. Enter adds the first match, Esc clears the filter.
 
 Generators don't need a photo. **Blank canvas · frame** (in the Sandbox tab
@@ -420,6 +420,38 @@ a tool with nothing loaded creates one at the selected frame automatically.
 On a real photo, tools marked `imageReactive` expose an **Image** slider that
 mixes the photo's luminance into the tool's own field, so the photo comes
 through in the tool's inks and structure.
+
+### Gradients
+
+The Gradients kind (`gradients.ts`, Nos. 53–63) is a gradient maker. Every
+tool blends its inks in **OKLab** (`sbToOk` / `sbFromOk`, `sbInkOk` for a
+first-to-last ramp, `sbInkLoop` for a closed loop that can flow forever).
+That keeps transitions between far-apart colours clean instead of passing
+through RGB's muddy grey middle. The tools default to a little grain so
+8-bit output doesn't band.
+
+- **Mesh**: free-form mesh gradient. Colour points spread round a loose ring
+  and blend with Gaussian weights. With Image up, each point takes its colour
+  from the photo.
+- **Spectrum**: the basics: linear / radial / conic / diamond / mirror, with
+  Repeat, Balance and Steps. With Image up it becomes a gradient map of the
+  photo.
+- **Fluted**: a gradient (or, with Image up, the photo) seen through ribbed
+  reeded glass. Each rib shows a squeezed, mirrored slice, so the field
+  breaks into stepped bands; Curve bows the ribs into arcs.
+- **Hourglass**: mirrored ribbons that cinch toward a glowing waist.
+- **Lumen**: a light-room tunnel (Room or Well). Each pixel's depth comes
+  from a bisection over cross-sections that slide toward the vanishing point
+  and shrink, and colour pours along that depth.
+- **Horizon**: curved sky-and-floor bands crowding toward a bright,
+  iridescent horizon line.
+- **Silk**: domain-warped folds lit by their own slope (`dFdx`/`dFdy`).
+- **Orbs**: out-of-focus light orbs; Stretch pulls them into smears.
+- **Curtain**: vertical light curtains. The light adds up and rolls off
+  instead of clipping.
+- **Lightspeed**: warp-speed streaks, dashed in log-radius so they stretch
+  as they rush outward.
+- **Halo**: a glowing core or a big rim-lit sphere in soft rings.
 
 ### Motion
 

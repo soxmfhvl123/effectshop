@@ -1,6 +1,6 @@
 import type { EffectCategory } from '../../types/effect'
 
-export type SandboxKind = Extract<EffectCategory, 'Grounds' | 'Repeats' | 'Prints' | 'Surfaces' | 'Emblems'>
+export type SandboxKind = Extract<EffectCategory, 'Gradients' | 'Grounds' | 'Repeats' | 'Prints' | 'Surfaces' | 'Emblems'>
 
 // A tool-specific control. Each becomes a uniform named `p_<id>` in the
 // tool's GLSL: float for slider/toggle (0/1)/select (option index), vec3 for

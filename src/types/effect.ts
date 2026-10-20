@@ -30,6 +30,7 @@ export type EffectCategory =
   | 'Overlay'
   // Sandbox generators (see effects/sandbox) -- shown in their own
   // sidebar tab rather than the main Effect Library.
+  | 'Gradients'
   | 'Grounds'
   | 'Repeats'
   | 'Prints'
