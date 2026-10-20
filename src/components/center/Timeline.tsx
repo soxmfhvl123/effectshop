@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { useEffectStore } from '../../store/useEffectStore'
 import { getEffectDefinition } from '../../effects/registry'
+import { SCENE_TRANSITIONS, sequenceLayout } from '../../lib/sequence'
 import type { Keyframe } from '../../types/effect'
 
 interface Track {
@@ -44,6 +45,9 @@ export function Timeline() {
   const removeKeyframe = useEffectStore((s) => s.removeKeyframe)
   const selectedInstanceId = useEffectStore((s) => s.selectedInstanceId)
   const selectInstance = useEffectStore((s) => s.selectInstance)
+  const sequenceMode = useEffectStore((s) => s.sequenceMode)
+  const sequenceTransition = useEffectStore((s) => s.sequenceTransition)
+  const layout = useMemo(() => sequenceLayout(activeEffects, sequenceTransition), [activeEffects, sequenceTransition])
 
   const scrubAreaRef = useRef<HTMLDivElement>(null)
   const [isScrubbing, setIsScrubbing] = useState(false)
@@ -116,8 +120,44 @@ export function Timeline() {
           ))}
         </div>
 
+        {sequenceMode && layout.scenes.length > 0 && (
+          <div className="relative h-8 border-b border-zinc-800">
+            {layout.scenes.map((sc, i) => (
+              <button
+                key={sc.instanceId}
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => {
+                  selectInstance(sc.instanceId)
+                  seek(sc.start)
+                }}
+                title={`${sc.name} · ${(sc.end - sc.start).toFixed(1)}s`}
+                className={`absolute top-1 bottom-1 overflow-hidden rounded-sm border px-1.5 text-left font-mono text-[10px] uppercase tracking-wider ${
+                  selectedInstanceId === sc.instanceId ? 'border-zinc-200 text-zinc-100' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'
+                }`}
+                style={{ left: pct(sc.start), width: pct(sc.end - sc.start), backgroundColor: `${TRACK_COLORS[i % TRACK_COLORS.length]}22` }}
+              >
+                <span className="truncate">
+                  {String(i + 1).padStart(2, '0')} {sc.name}
+                </span>
+              </button>
+            ))}
+            {layout.scenes.map(
+              (sc) =>
+                sc.overlap > 0 && (
+                  <div
+                    key={`${sc.instanceId}-t`}
+                    title={`${SCENE_TRANSITIONS.find((t) => t.value === sc.transition)?.label ?? ''} · ${sc.overlap.toFixed(1)}s`}
+                    className="pointer-events-none absolute top-0 bottom-0 bg-gradient-to-r from-transparent to-white/25"
+                    style={{ left: pct(sc.end - sc.overlap), width: pct(sc.overlap) }}
+                  />
+                ),
+            )}
+          </div>
+        )}
+
         <div className="max-h-40 overflow-y-auto">
-          {tracks.length === 0 ? (
+          {tracks.length === 0 && sequenceMode ? null : tracks.length === 0 ? (
             <p className="px-3 py-4 text-center font-mono text-xs text-zinc-600">
               No keyframes yet — click the diamond next to a parameter or Opacity to start animating it.
             </p>

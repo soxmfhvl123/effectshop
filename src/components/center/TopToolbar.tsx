@@ -64,6 +64,7 @@ export function TopToolbar() {
   const seek = useEffectStore((s) => s.seek)
   const setImageDuration = useEffectStore((s) => s.setImageDuration)
   const isExporting = useEffectStore((s) => s.isExporting)
+  const sequenceMode = useEffectStore((s) => s.sequenceMode)
 
   const hasMedia = mediaType !== null
 
@@ -149,8 +150,8 @@ export function TopToolbar() {
                   step={0.5}
                   value={duration}
                   onChange={(e) => setImageDuration(Number(e.target.value))}
-                  disabled={isExporting}
-                  title="Length of this image's synthetic clip, for keyframing and video export"
+                  disabled={isExporting || sequenceMode}
+                  title={sequenceMode ? 'Set by the scenes in Sequence mode' : "Length of this image's synthetic clip, for keyframing and video export"}
                   className="w-14 rounded border border-zinc-800 bg-zinc-950 px-1.5 py-1 text-right font-mono text-xs text-zinc-200 focus:border-zinc-600 focus:outline-none"
                 />
                 <span className="font-mono text-xs text-zinc-600">s</span>

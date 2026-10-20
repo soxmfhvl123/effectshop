@@ -165,7 +165,8 @@ export const GRADIENTS: SandboxTool[] = [
       slider('perspective', 'Perspective', 0.45, 0, 1),
       slider('spread', 'Colour Range', 0.6, 0.2, 2.5),
       slider('faces', 'Walls', 0.3, 0, 1),
-      slider('glow', 'Glow', 0.5, 0, 1),
+      slider('glow', 'Glow', 0.6, 0, 1),
+      slider('haze', 'Haze', 0.3, 0, 1),
     ],
     glsl: /* glsl */ `
       float lumenShape(vec2 q, vec2 a) {
@@ -196,17 +197,33 @@ export const GRADIENTS: SandboxTool[] = [
           }
           s = 0.5 * (lo + hi);
         }
-        // Pour: colour runs down the tunnel into the far wall, a whole palette a cycle
+        // Pour: colour runs down the room into the far wall, a whole palette a cycle
+        float phase = sbR(vec2(9.0, 9.0)) - sbMarch(sbMv(0.0));
         // near walls fill more of the view than far ones, so ease the depth
         float sd = 1.0 - pow(1.0 - s, 1.8);
-        vec3 col = sbInkLoop(sd * p_spread + sbR(vec2(9.0, 9.0)) - sbMarch(sbMv(0.0)));
-        // a room's floor catches more light than its walls
+        // the walls: one continuous run of colour from the opening down the room
+        vec3 col = sbInkLoop(sd * p_spread + phase);
+        // the light lives at the far end: the room brightens as it recedes and
+        // the opening sinks into a soft dusk
+        col *= mix(0.55, 1.1, smoothstep(0.0, 1.0, sd));
+        // walls meet in soft corners; the floor catches the most light
         vec2 q = (p - vp * s) / (a * mix(1.0, far, s));
-        float side = step(abs(q.y), abs(q.x));
-        float floorF = (1.0 - side) * step(q.y, 0.0);
-        if (p_shape < 0.5) col *= 1.0 + (floorF * 0.2 - side * 0.12) * p_faces * step(s, 0.999);
-        // the far wall glows
-        return sbMixOk(col, vec3(1.0), p_glow * 0.55 * smoothstep(0.7, 1.0, s));
+        if (p_shape < 0.5) {
+          float sideW = smoothstep(-0.18, 0.18, abs(q.x) - abs(q.y));
+          float floorW = (1.0 - sideW) * smoothstep(0.1, -0.4, q.y);
+          float ceilW = (1.0 - sideW) * smoothstep(-0.1, 0.4, q.y);
+          col *= 1.0 + (floorW * 0.24 - sideW * 0.1 - ceilW * 0.06) * p_faces * 2.0 * (1.0 - smoothstep(0.96, 1.0, s));
+        }
+        // the far wall: a colour from across the loop, glowing, brightest in
+        // its middle, with light spilling round its edge into the room
+        float fe = lumenShape(p - vp, a * far);
+        vec3 farCol = sbMixOk(sbInkLoop(p_spread + phase + 0.5), vec3(1.0), 0.15 + 0.35 * p_glow);
+        float inFar = 1.0 - smoothstep(0.97, 1.03, fe);
+        col = sbMixOk(col, farCol * (1.0 + 0.15 * p_glow * (1.0 - fe)), inFar);
+        float spill = exp(-max(fe - 1.0, 0.0) * mix(10.0, 2.5, p_glow)) * (1.0 - inFar);
+        col = sbMixOk(col, farCol, clamp(spill * p_glow * 0.75, 0.0, 1.0));
+        // haze: the air itself takes on the light's colour deeper in
+        return sbMixOk(col, farCol, clamp(p_haze * 0.35 * sd, 0.0, 1.0));
       }
     `,
   },
@@ -539,6 +556,160 @@ export const GRADIENTS: SandboxTool[] = [
         float ringR = R + (reach - R) * 0.45;
         float arc = exp(-pow((r - ringR) / 0.035, 2.0)) * pow(0.5 + 0.5 * cos(ga), 4.0) * mFlare * 0.8;
         return sbMixOk(col, vec3(1.0), clamp(glint + arc, 0.0, 1.0));
+      }
+    `,
+  },
+  {
+    id: 'sbPortal',
+    no: 64,
+    name: 'Portal',
+    makes: 'glowing windows in coloured walls',
+    kind: 'Gradients',
+    grain: 0.1,
+    inks: ['#2a1c4f', '#4a2c7a', '#ff4f7a', '#ff9a5c', '#ffd0a8'],
+    movements: ['Breathe', 'Shift', 'Drift'],
+    params: [
+      select('shape', 'Shape', ['Rect', 'Round', 'Arch']),
+      slider('width', 'Width', 0.5, 0, 1),
+      slider('height', 'Height', 0.6, 0, 1),
+      slider('lift', 'Lift', 0.5, 0, 1),
+      slider('softness', 'Edge Softness', 0.35, 0, 1),
+      slider('spill', 'Light Spill', 0.5, 0, 1),
+    ],
+    glsl: /* glsl */ `
+      vec3 sbMain(vec2 p, vec2 uv) {
+        vec2 asp = sbAspect();
+        // the wall: a soft vertical wash, sinking into shadow toward the frame
+        vec3 wall = sbMixOk(sbInk(0.0), sbInk(1.0), smoothstep(-0.6, 0.6, p.y / asp.y));
+        wall *= 1.0 - 0.35 * smoothstep(0.3, 0.9, length(p / asp));
+        // the window; Drift floats it, Breathe swells it
+        vec2 c = vec2(0.0, (p_lift - 0.5) * 0.5 * asp.y) + sbCirc(0.0) * vec2(0.06, 0.04) * sbMv(2.0);
+        vec2 hs = vec2(mix(0.12, 0.42, p_width) * asp.x, mix(0.12, 0.42, p_height) * asp.y) * (1.0 + 0.14 * sbMv(0.0) * sbOsc(0.0));
+        vec2 q = p - c;
+        float d;
+        if (p_shape < 0.5) d = sbBox(q, hs);
+        else if (p_shape < 1.5) d = sbRoundBox(q, hs, min(hs.x, hs.y) * 0.5);
+        else {
+          // an arch: a box whose top is a half circle
+          float spring = hs.y - hs.x;
+          d = q.y > spring ? length(q - vec2(0.0, spring)) - hs.x : sbBox(q, hs);
+        }
+        float soft = mix(0.002, 0.06, p_softness);
+        float inside = 1.0 - smoothstep(-soft, soft, d);
+        // inside, a deep field that seems to go on forever: brightest in the
+        // middle, its colour slowly turning (Shift turns it a full loop a cycle)
+        float r = length(q / hs);
+        vec3 field = sbInkLoop(0.45 + r * 0.18 + sbR(vec2(3.0, 3.0)) * 0.3 - sbMarch(sbMv(1.0)));
+        field *= mix(1.18, 0.85, smoothstep(0.0, 1.2, r));
+        vec3 col = sbMixOk(wall, field, inside);
+        // light spills out of the window onto the wall around it
+        float spill = exp(-max(d, 0.0) / mix(0.02, 0.28, p_spill)) * (1.0 - inside) * p_spill;
+        return sbMixOk(col, sbMixOk(field, vec3(1.0), 0.2), clamp(spill * 0.85, 0.0, 1.0));
+      }
+    `,
+  },
+  {
+    id: 'sbOculus',
+    no: 65,
+    name: 'Oculus',
+    makes: 'sky openings in lit ceilings',
+    kind: 'Gradients',
+    grain: 0.1,
+    inks: ['#1d2b6b', '#4b6cff', '#a9c8ff', '#ffd6e8', '#ff8a6b', '#6a2a7a'],
+    movements: ['Dusk', 'Drift', 'Breathe'],
+    params: [
+      select('shape', 'Shape', ['Square', 'Round']),
+      slider('size', 'Opening', 0.5, 0, 1),
+      slider('spread', 'Light Reach', 0.5, 0, 1),
+      slider('clouds', 'Clouds', 0.4, 0, 1),
+      slider('rim', 'Rim', 0.5, 0, 1),
+    ],
+    glsl: /* glsl */ `
+      vec3 sbMain(vec2 p, vec2 uv) {
+        vec2 asp = sbAspect();
+        // Dusk: sky and ceiling travel together through the palette, like an evening
+        float dusk = sbR(vec2(1.0, 7.0)) * 0.2 - sbMarch(sbMv(0.0));
+        float R = mix(0.1, 0.38, p_size) * (1.0 + 0.22 * sbMv(2.0) * sbOsc(0.0));
+        float d = p_shape < 0.5 ? max(abs(p.x), abs(p.y)) : length(p);
+        // a knife-thin edge, the way these openings are cut
+        float inside = 1.0 - smoothstep(R - 0.0015, R + 0.0015, d);
+        // the sky: a soft vertical gradient with drifting cloud
+        vec2 cq = p * 3.0 + sbDrift(sbMv(1.0)) * 3.5;
+        float cloud = smoothstep(0.38, 0.75, sbFbm(cq + 4.0, 5.0)) * p_clouds;
+        vec3 sky = sbInkLoop(0.62 + 0.12 * (p.y / max(R, 0.01)) + dusk);
+        sky = sbMixOk(sky, vec3(1.0), cloud * 0.7);
+        // the ceiling, lit from the opening and falling off into the room's corners
+        float roomD = mix(d, max(abs(p.x), abs(p.y)), 0.5);
+        float fall = clamp((roomD - R) / mix(0.3, 1.0, p_spread), 0.0, 1.0);
+        vec3 ceil = sbInkLoop(0.12 + fall * 0.3 + dusk) * mix(1.1, 0.45, pow(fall, 0.8));
+        vec3 col = sbMixOk(ceil, sky, inside);
+        // the opening's lip catches the light
+        float lip = exp(-max(d - R, 0.0) / 0.006) * (1.0 - inside) * 0.5 * p_rim;
+        return sbMixOk(col, vec3(1.0), clamp(lip, 0.0, 1.0));
+      }
+    `,
+  },
+  {
+    id: 'sbCorner',
+    no: 66,
+    name: 'Corner',
+    makes: 'floating light cubes in a room corner',
+    kind: 'Gradients',
+    grain: 0.1,
+    inks: ['#1a1030', '#24163f', '#ff5aa0', '#ff8ad0', '#ffe0f0'],
+    movements: ['Float', 'Turn', 'Pulse'],
+    params: [
+      slider('size', 'Cube Size', 0.4, 0, 1),
+      slider('tilt', 'Tilt', 0.55, 0, 1),
+      slider('glow', 'Glow', 0.6, 0, 1),
+      slider('soft', 'Softness', 0.45, 0, 1),
+      slider('room', 'Room Light', 0.5, 0, 1),
+    ],
+    glsl: /* glsl */ `
+      vec3 cornerRotY(vec3 v, float a) { float c = cos(a); float s = sin(a); return vec3(c * v.x + s * v.z, v.y, -s * v.x + c * v.z); }
+      vec3 cornerRotX(vec3 v, float a) { float c = cos(a); float s = sin(a); return vec3(v.x, c * v.y - s * v.z, s * v.y + c * v.z); }
+      vec3 sbMain(vec2 p, vec2 uv) {
+        vec2 asp = sbAspect();
+        float pulse = 1.0 + 0.35 * sbMv(2.0) * sbOsc(0.0);
+        // the room: two walls meeting in a vertical corner, the floor below
+        float seam = -0.18 * asp.y - 0.45 * abs(p.x);
+        float onFloor = smoothstep(0.004, -0.004, p.y - seam);
+        vec3 room = mix(sbInk(0.0) * mix(1.0, 0.8, step(0.0, p.x)), sbInk(1.0), onFloor) * mix(0.6, 1.4, p_room);
+        // the cube, ray-traced: Float bobs it, Turn spins it (half a turn
+        // repeats a cube exactly, so the loop closes)
+        float cy = 0.04 + 0.12 * sbMv(0.0) * sbOsc(0.0);
+        float yaw = 0.7854 + sbSpin(sbMv(1.0)) * 0.5 + (sbR(vec2(2.0, 2.0)) - 0.5) * 0.6;
+        float pitch = mix(0.2, 0.75, p_tilt);
+        vec3 ro = vec3(0.0, -cy, -3.2);
+        vec3 rd = normalize(vec3(p, 1.6));
+        // look down on it a little, so its top face shows
+        ro = cornerRotY(cornerRotX(ro, pitch), -yaw);
+        rd = cornerRotY(cornerRotX(rd, pitch), -yaw);
+        float b = mix(0.25, 0.75, p_size);
+        vec3 m = 1.0 / rd;
+        vec3 n = m * ro;
+        vec3 k = abs(m) * b;
+        vec3 t1 = -n - k;
+        vec3 t2 = -n + k;
+        float tN = max(max(t1.x, t1.y), t1.z);
+        float tF = min(min(t2.x, t2.y), t2.z);
+        // closest approach of the ray to the cube's centre, for the glow
+        float dc = length(ro - rd * dot(ro, rd));
+        float glow = exp(-pow(max(dc - b * 0.8, 0.0) / mix(0.2, 0.9, p_glow), 2.0)) * p_glow * pulse;
+        vec3 light = sbInk(4.0);
+        vec3 col = sbMixOk(room, light, clamp(glow * 0.6, 0.0, 1.0));
+        if (tN < tF && tF > 0.0) {
+          // which face the ray enters through, back in room space for shading
+          vec3 nl = -sign(rd) * step(t1.yzx, t1.xyz) * step(t1.zxy, t1.xyz);
+          vec3 nw = cornerRotX(cornerRotY(nl, yaw), -pitch);
+          // top face brightest; the side facing right vs left get their own inks
+          vec3 face = abs(nw.y) > 0.5 ? sbInk(4.0) : (nw.x > 0.0 ? sbInk(2.0) : sbInk(3.0));
+          // soft silhouette: thin slivers of cube fade into the glow
+          float a = smoothstep(0.0, mix(0.005, 0.25, p_soft), tF - tN);
+          // it is made of light: faces glow and blend a touch into the haze
+          col = sbMixOk(col, sbMixOk(face, light, 0.2) * pulse, a * 0.92);
+        }
+        return col;
       }
     `,
   },

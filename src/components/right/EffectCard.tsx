@@ -3,6 +3,8 @@ import { CSS } from '@dnd-kit/utilities'
 import { Eye, EyeOff, GripVertical, Trash2 } from 'lucide-react'
 import { useEffectStore } from '../../store/useEffectStore'
 import { getEffectiveValue } from '../../lib/keyframes'
+import { clipOf, isSceneEffect, SCENE_TRANSITIONS } from '../../lib/sequence'
+import type { SceneTransition } from '../../types/effect'
 import type { AppliedEffect } from '../../types/effect'
 import { KeyframeToggleButton } from './KeyframeControls'
 
@@ -14,6 +16,10 @@ export function EffectCard({ effect }: { effect: AppliedEffect }) {
   const setEffectOpacity = useEffectStore((s) => s.setEffectOpacity)
   const duration = useEffectStore((s) => s.duration)
   const currentTime = useEffectStore((s) => s.currentTime)
+  const sequenceMode = useEffectStore((s) => s.sequenceMode)
+  const setClip = useEffectStore((s) => s.setClip)
+  const isScene = sequenceMode && isSceneEffect(effect)
+  const clip = clipOf(effect)
   const opacityTrack = effect.keyframes?.opacity ?? []
   const displayedOpacity = getEffectiveValue(effect, 'opacity', currentTime, effect.opacity)
 
@@ -84,6 +90,38 @@ export function EffectCard({ effect }: { effect: AppliedEffect }) {
           <KeyframeToggleButton instanceId={effect.instanceId} paramId="opacity" value={displayedOpacity} track={opacityTrack} />
         )}
       </div>
+
+      {isScene && (
+        <div className="mt-1.5 flex items-center gap-2 pl-[22px]" onClick={(e) => e.stopPropagation()}>
+          <span className="w-12 font-mono text-[10px] uppercase tracking-wide text-zinc-600">Scene</span>
+          <input
+            type="number"
+            min={0.5}
+            max={60}
+            step={0.5}
+            value={clip.duration}
+            title="How long this scene plays"
+            onChange={(e) => setClip(effect.instanceId, { duration: Math.min(60, Math.max(0.5, Number(e.target.value) || 0.5)) })}
+            className="w-14 rounded border border-zinc-800 bg-zinc-950 px-1 py-0.5 text-right font-mono text-xs text-zinc-200 focus:border-zinc-600 focus:outline-none"
+          />
+          <span className="font-mono text-[10px] text-zinc-600">s →</span>
+          <select
+            value={clip.transition}
+            title="How this scene hands over to the next one"
+            onChange={(e) => setClip(effect.instanceId, { transition: e.target.value as SceneTransition }, true)}
+            className="flex-1 rounded border border-zinc-800 bg-zinc-950 px-1 py-0.5 font-mono text-xs text-zinc-200 focus:border-zinc-600 focus:outline-none"
+          >
+            {SCENE_TRANSITIONS.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      {sequenceMode && !isSceneEffect(effect) && effect.enabled && (
+        <p className="mt-1 pl-[22px] font-mono text-[10px] uppercase tracking-wide text-zinc-600">Filter · over every scene</p>
+      )}
     </div>
   )
 }

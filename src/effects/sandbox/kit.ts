@@ -32,6 +32,10 @@ export const SB_KIT = /* glsl */ `
   uniform float uDither;
   uniform float uGrain;
   uniform float uBlend;
+  // Sequence mode hand-overs (lib/sequence.ts): which transition reveals this
+  // scene over the one before it, and how far along it is. uTrans 0 = shown.
+  uniform float uTrans;
+  uniform float uTransP;
   varying vec2 vUv;
 
   #define SB_PI 3.14159265
@@ -264,12 +268,40 @@ export const SB_KIT = /* glsl */ `
     return mix(lo, hi, step(0.5, base));
   }
 
+  // --- sequence transitions ---
+  float sbEase(float x) { x = clamp(x, 0.0, 1.0); return x * x * (3.0 - 2.0 * x); }
+  // A soft edge sweeping over x in 0..1 as p goes 0..1: 0 everywhere at the
+  // start, 1 everywhere at the end.
+  float sbSweep(float x, float p, float w) { float e = p * (1.0 + w) - w; return 1.0 - smoothstep(e, e + w, x); }
+  // How much of this scene shows at this pixel during a hand-over.
+  float sbTransAlpha() {
+    float p = clamp(uTransP, 0.0, 1.0);
+    if (uTrans < 0.5) return 1.0;
+    if (uTrans < 1.5) return sbEase(p);
+    if (uTrans < 2.5) return sbSweep(vUv.x * 0.8 + (1.0 - vUv.y) * 0.2, sbEase(p), 0.22);
+    if (uTrans < 3.5) {
+      vec2 a = sbAspect();
+      return sbSweep(length((vUv - 0.5) * a) / (0.5 * length(a)), sbEase(p), 0.14);
+    }
+    if (uTrans < 4.5) return smoothstep(0.42, 0.58, p);
+    if (uTrans < 5.5) return step(sbH21(floor(gl_FragCoord.xy / (sbDitherCell() * 3.0)) + 7.7), p * 1.02);
+    return step(1.0 - sbEase(p), vUv.x);
+  }
+  // Slide pushes the incoming scene in from the right.
+  vec2 sbTransOffset() {
+    if (uTrans < 5.5) return vec2(0.0);
+    return vec2(-(1.0 - sbEase(uTransP)) * sbAspect().x, 0.0);
+  }
+
   void sbFinish(vec3 gen) {
     vec4 src = texture2D(tDiffuse, vUv);
     // grain re-rolls with each animation frame, like film
     float g = sbH21(floor(gl_FragCoord.xy / sbDitherCell()) + sbFrame() * vec2(17.0, 31.0) + uSeedOff) - 0.5;
     gen = clamp(gen + g * uGrain * 0.3, 0.0, 1.0);
     vec3 col = sbBlendMode(src.rgb, gen);
-    gl_FragColor = vec4(mix(src.rgb, col, uOpacity), src.a);
+    vec3 outCol = mix(src.rgb, col, uOpacity * sbTransAlpha());
+    // Flash: a white-out that peaks as the scenes swap
+    if (uTrans > 3.5 && uTrans < 4.5) outCol = mix(outCol, vec3(1.0), pow(1.0 - abs(uTransP * 2.0 - 1.0), 1.5) * 0.95);
+    gl_FragColor = vec4(outCol, src.a);
   }
 `

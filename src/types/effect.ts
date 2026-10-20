@@ -54,6 +54,16 @@ export interface AppliedEffect {
   // numeric (slider) values and only used in video mode; a param with no
   // entry here (or an empty array) just uses its static value.
   keyframes?: Record<string, Keyframe[]>
+  // Sequence mode: how long this Sandbox scene plays, and how it hands over
+  // to the next one (see lib/sequence.ts). Absent = the defaults.
+  clip?: SceneClip
+}
+
+export type SceneTransition = 'fade' | 'wipe' | 'iris' | 'flash' | 'dissolve' | 'slide' | 'cut'
+
+export interface SceneClip {
+  duration: number // seconds
+  transition: SceneTransition // into the next scene
 }
 
 // Static catalog entry for an effect available in the Left Sidebar library.

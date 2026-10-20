@@ -6,7 +6,7 @@ import { REPEATS } from './repeats'
 import { SURFACES } from './surfaces'
 import type { SandboxKind, SandboxTool } from './types'
 
-// Sorted by catalog number so the Sandbox tab's index reads 01 → 63.
+// Sorted by catalog number so the Sandbox tab's index reads 01 → 66.
 export const SANDBOX_TOOLS: SandboxTool[] = [...GROUNDS, ...REPEATS, ...PRINTS, ...SURFACES, ...GRADIENTS].sort((a, b) => a.no - b.no)
 
 export const SANDBOX_MAP: Record<string, SandboxTool> = Object.fromEntries(SANDBOX_TOOLS.map((t) => [t.id, t]))

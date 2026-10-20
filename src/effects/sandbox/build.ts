@@ -17,7 +17,7 @@ function buildFragment(tool: SandboxTool): string {
   const cached = fragmentCache.get(tool.id)
   if (cached) return cached
   const decls = tool.params.map((p) => `uniform ${p.type === 'color' ? 'vec3' : 'float'} p_${p.id};`).join('\n')
-  const source = `${SB_KIT}\n${decls}\n${tool.glsl}\nvoid main() { sbFinish(sbMain(sbCoord(), vUv)); }\n`
+  const source = `${SB_KIT}\n${decls}\n${tool.glsl}\nvoid main() { sbFinish(sbMain(sbCoord() + sbTransOffset(), vUv)); }\n`
   fragmentCache.set(tool.id, source)
   return source
 }
@@ -41,6 +41,8 @@ export function createSandboxPass(tool: SandboxTool): ShaderPass {
     uDither: { value: 0 },
     uGrain: { value: 0 },
     uBlend: { value: 0 },
+    uTrans: { value: 0 },
+    uTransP: { value: 0 },
   }
   for (const p of tool.params) {
     uniforms[`p_${p.id}`] = { value: p.type === 'color' ? new THREE.Color(String(p.value)) : 0 }

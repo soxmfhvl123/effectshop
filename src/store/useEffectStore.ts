@@ -1,7 +1,8 @@
 import { create } from 'zustand'
-import type { AppliedEffect, MediaType, Preset, ZoomMode } from '../types/effect'
+import type { AppliedEffect, MediaType, Preset, SceneClip, ZoomMode } from '../types/effect'
 import { getEffectDefinition } from '../effects/registry'
 import { findNearestKeyframe, removeKeyframeAt, upsertKeyframe } from '../lib/keyframes'
+import { clipOf } from '../lib/sequence'
 
 let instanceCounter = 0
 const nextInstanceId = () => `fx_${Date.now()}_${instanceCounter++}`
@@ -68,6 +69,13 @@ export interface EffectShopState {
   selectInstance: (instanceId: string | null) => void
   loadPreset: (preset: Preset) => void
   resetAll: () => void
+
+  // --- sequence mode (Sandbox scenes played back to back) -------------
+  sequenceMode: boolean
+  sequenceTransition: number // seconds each hand-over takes
+  setSequenceMode: (on: boolean) => void
+  setSequenceTransition: (seconds: number) => void
+  setClip: (instanceId: string, patch: Partial<SceneClip>, undoable?: boolean) => void
 
   // --- keyframes (per-effect parameter/opacity animation tracks) ------
   // `paramId` is a parameter's id, or the reserved key 'opacity'.
@@ -279,6 +287,19 @@ export const useEffectStore = create<EffectShopState>((set, get) => ({
   },
 
   selectInstance: (instanceId) => set({ selectedInstanceId: instanceId }),
+
+  sequenceMode: false,
+  sequenceTransition: 0.8,
+  setSequenceMode: (on) => set({ sequenceMode: on, currentTime: 0 }),
+  setSequenceTransition: (seconds) => set({ sequenceTransition: Math.min(5, Math.max(0, seconds)) }),
+  setClip: (instanceId, patch, undoable = false) => {
+    if (undoable) pushHistory(get, set)
+    set((s) => ({
+      activeEffects: s.activeEffects.map((e) =>
+        e.instanceId === instanceId ? { ...e, clip: { ...clipOf(e), ...patch } } : e,
+      ),
+    }))
+  },
 
   toggleKeyframeAtCurrentTime: (instanceId, paramId, value) => {
     pushHistory(get, set)

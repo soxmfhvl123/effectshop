@@ -405,12 +405,12 @@ stay on the same generic overlay-blend pass as everything else.
 ## Sandbox (generative tools)
 
 The left sidebar's tabs are **Effects** (the original library), **Sandbox**,
-and **Presets**. Sandbox is a catalogue of 63 generative tools in six kinds:
+and **Presets**. Sandbox is a catalogue of 66 generative tools in six kinds:
 Gradients, Grounds, Repeats, Prints, Surfaces and Emblems. The idea and the index-style
 layout were inspired by playgrnd.tools. The tool names, numbering, "makes …"
 lines, shaders and motion are all original. The list has tool/kind
 counters, a pill filter with a **Random** button, kind chips with counts,
-numbered rows with tracked uppercase names, and 01→63 / 63→01 / A–Z
+numbered rows with tracked uppercase names, and 01→66 / 66→01 / A–Z
 ordering. Enter adds the first match, Esc clears the filter.
 
 Generators don't need a photo. **Blank canvas · frame** (in the Sandbox tab
@@ -423,7 +423,7 @@ through in the tool's inks and structure.
 
 ### Gradients
 
-The Gradients kind (`gradients.ts`, Nos. 53–63) is a gradient maker. Every
+The Gradients kind (`gradients.ts`, Nos. 53–66) is a gradient maker. Every
 tool blends its inks in **OKLab** (`sbToOk` / `sbFromOk`, `sbInkOk` for a
 first-to-last ramp, `sbInkLoop` for a closed loop that can flow forever).
 That keeps transitions between far-apart colours clean instead of passing
@@ -443,6 +443,18 @@ through RGB's muddy grey middle. The tools default to a little grain so
 - **Lumen**: a light-room tunnel (Room or Well). Each pixel's depth comes
   from a bisection over cross-sections that slide toward the vanishing point
   and shrink, and colour pours along that depth.
+  - The room brightens toward its far wall.
+  - The walls meet in soft corners.
+  - The far wall takes a colour from across the palette loop and spills its
+    glow into the room.
+  - Haze tints the air deeper in.
+- **Portal**: a glowing window (Rect / Round / Arch) cut into a coloured
+  wall. The field inside seems to go on forever, and light spills onto the
+  wall around it.
+- **Oculus**: looking up at a knife-edged opening in a lit ceiling. Sky and
+  ceiling travel through the palette together (Dusk).
+- **Corner**: a ray-traced cube of light floating in a room corner, glowing
+  into the walls.
 - **Horizon**: curved sky-and-floor bands crowding toward a bright,
   iridescent horizon line.
 - **Silk**: domain-warped folds lit by their own slope (`dFdx`/`dFdy`).
@@ -452,6 +464,36 @@ through RGB's muddy grey middle. The tools default to a little grain so
 - **Lightspeed**: warp-speed streaks, dashed in log-radius so they stretch
   as they rush outward.
 - **Halo**: a glowing core or a big rim-lit sphere in soft rings.
+
+### Sequence mode
+
+The **Sequence** toggle in the Active Pipeline header turns the enabled
+Sandbox tools into **scenes** that play one after another, top to bottom.
+The last scene hands back to the first, so the whole sequence is one
+seamless loop. Every other effect keeps applying on top of whichever scene
+is showing, like a filter over the whole film. With nothing loaded,
+switching it on starts a blank 16:9 frame.
+
+- Each scene card gets a length in seconds and a transition into the next
+  scene: Fade, Wipe, Iris, Flash (a white-out at the swap), Dissolve, Slide
+  or Cut.
+- The header sets how long every hand-over takes.
+- A hand-over never takes more than half of either scene it joins.
+- The timeline shows the scenes as a strip; click one to jump to it.
+- The image's duration becomes exactly one pass through the scenes, so
+  **Export Video** records the whole sequence once.
+
+How it works:
+
+- `lib/sequence.ts` lays the scenes out and answers, for any playhead time,
+  which scene owns the moment and which one, if any, is being revealed over
+  it. It also gives each scene its own clock: the time since it first
+  appeared, counted unbroken across the loop.
+- `EffectRenderer`'s RAF loop renders only those passes, then the filters,
+  and drives each scene's `uTime` from that clock. That makes scrubbing
+  show the right frame and keeps every scene's animation starting fresh.
+- The kit's `sbTransAlpha` / `sbTransOffset`, driven by the `uTrans` /
+  `uTransP` uniforms, draw the incoming scene's transition mask.
 
 ### Motion
 

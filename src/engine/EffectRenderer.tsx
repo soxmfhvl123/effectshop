@@ -16,6 +16,7 @@ import { updateMetaballTracking } from '../effects/metaballTracking'
 import { updateFireflySwarmOverlay } from '../effects/fireflySwarmOverlay'
 import { updateEchoTrailOverlay } from '../effects/echoTrailOverlay'
 import { OVERLAY_UPDATERS } from '../effects/overlayRegistry'
+import { isSceneEffect, sceneStatesAt, sequenceLayout, TRANSITION_INDEX } from '../lib/sequence'
 import type { AppliedEffect } from '../types/effect'
 
 const BLOB_TRACKER_UPDATE_INTERVAL = 0.15 // seconds between live re-detections during video playback
@@ -169,6 +170,11 @@ export const EffectRenderer = forwardRef<EffectRendererHandle, Props>(function E
   const mediaTypeRef = useRef<'image' | 'video' | null>(null)
   const isPlayingRef = useRef(false)
   const durationRef = useRef(0)
+  const sequenceModeRef = useRef(false)
+  const sequenceTransitionRef = useRef(0.8)
+  // Which pass order the RAF loop last installed for sequence mode, so it
+  // only reassigns composer.passes when the visible scenes change.
+  const sequencePassKeyRef = useRef('')
 
   const [fitScale, setFitScale] = useState(1)
   const [isDraggingDivider, setIsDraggingDivider] = useState(false)
@@ -191,6 +197,9 @@ export const EffectRenderer = forwardRef<EffectRendererHandle, Props>(function E
   const currentTime = useEffectStore((s) => s.currentTime)
   const duration = useEffectStore((s) => s.duration)
   const isPlaying = useEffectStore((s) => s.isPlaying)
+  const sequenceMode = useEffectStore((s) => s.sequenceMode)
+  const sequenceTransition = useEffectStore((s) => s.sequenceTransition)
+  const setImageDuration = useEffectStore((s) => s.setImageDuration)
   const setSourceImage = useEffectStore((s) => s.setSourceImage)
   const setSourceVideo = useEffectStore((s) => s.setSourceVideo)
   const setPlaying = useEffectStore((s) => s.setPlaying)
@@ -208,6 +217,8 @@ export const EffectRenderer = forwardRef<EffectRendererHandle, Props>(function E
   mediaTypeRef.current = mediaType
   isPlayingRef.current = isPlaying
   durationRef.current = duration
+  sequenceModeRef.current = sequenceMode
+  sequenceTransitionRef.current = sequenceTransition
   if (!isPlaying) imageClockRef.current = currentTime
 
   // ---- one-time Three.js setup ------------------------------------------
@@ -279,8 +290,50 @@ export const EffectRenderer = forwardRef<EffectRendererHandle, Props>(function E
       const mediaSource = sourceVideoRef.current ?? sourceImageRef.current
       if (dueForBlobUpdate && mediaSource) lastBlobUpdateRef.current = elapsed
 
+      // Sequence mode: only the scene(s) showing at the playhead render, each
+      // on its own clock, with any hand-over's transition fed to the incoming
+      // one; every non-scene effect still runs on top, in pipeline order.
+      let sceneClock: Map<string, number> | null = null
+      if (sequenceModeRef.current) {
+        const layout = sequenceLayout(activeEffectsRef.current, sequenceTransitionRef.current)
+        if (layout.scenes.length > 0) {
+          sceneClock = new Map()
+          const scenePasses: ShaderPass[] = []
+          const keyParts: string[] = []
+          for (const st of sceneStatesAt(layout, playheadTime)) {
+            const pass = passMapRef.current.get(st.instanceId)
+            if (!pass) continue
+            pass.uniforms.uTrans.value = st.role === 'incoming' ? TRANSITION_INDEX[st.transition] : 0
+            pass.uniforms.uTransP.value = st.progress
+            sceneClock.set(st.instanceId, st.localTime)
+            scenePasses.push(pass)
+            keyParts.push(st.instanceId)
+          }
+          const filterPasses: ShaderPass[] = []
+          for (const e of activeEffectsRef.current) {
+            if (!e.enabled || isSceneEffect(e)) continue
+            const pass = passMapRef.current.get(e.instanceId)
+            if (pass) {
+              filterPasses.push(pass)
+              keyParts.push(e.instanceId)
+            }
+          }
+          const key = keyParts.join('|')
+          const renderPass = renderPassRef.current
+          const outputPass = outputPassRef.current
+          if (key !== sequencePassKeyRef.current && renderPass && outputPass) {
+            sequencePassKeyRef.current = key
+            const next = [renderPass, ...scenePasses, ...filterPasses, outputPass]
+            next.forEach((p, i) => {
+              p.renderToScreen = i === next.length - 1
+            })
+            composer.passes = next
+          }
+        }
+      }
+
       passMapRef.current.forEach((pass, instanceId) => {
-        tickPassTime(pass, elapsed)
+        tickPassTime(pass, sceneClock?.get(instanceId) ?? elapsed)
         const effect = activeEffectsRef.current.find((e) => e.instanceId === instanceId)
         if (!effect) return
         const hasKeyframes = effect.keyframes && Object.keys(effect.keyframes).length > 0
@@ -514,6 +567,13 @@ export const EffectRenderer = forwardRef<EffectRendererHandle, Props>(function E
       }
     }
 
+    // Outside sequence mode every scene is fully shown; in it, the RAF loop
+    // installs its own pass order on the next frame.
+    for (const pass of orderedPasses) {
+      if (pass.uniforms.uTrans) pass.uniforms.uTrans.value = 0
+    }
+    sequencePassKeyRef.current = ''
+
     const renderPass = renderPassRef.current
     const outputPass = outputPassRef.current
     if (!renderPass || !outputPass) return
@@ -522,7 +582,14 @@ export const EffectRenderer = forwardRef<EffectRendererHandle, Props>(function E
       p.renderToScreen = i === nextPasses.length - 1
     })
     composer.passes = nextPasses
-  }, [activeEffects, imageWidth, imageHeight, sourceImage, sourceVideo])
+  }, [activeEffects, imageWidth, imageHeight, sourceImage, sourceVideo, sequenceMode])
+
+  // ---- sequence mode: an image's timeline is exactly one pass through the scenes
+  useEffect(() => {
+    if (!sequenceMode || mediaType !== 'image') return
+    const { total } = sequenceLayout(activeEffects, sequenceTransition)
+    if (total > 0) setImageDuration(total)
+  }, [sequenceMode, activeEffects, sequenceTransition, mediaType, setImageDuration])
 
   // ---- fit-to-container sizing ---------------------------------------------
   useEffect(() => {
