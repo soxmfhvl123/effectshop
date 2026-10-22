@@ -1,7 +1,49 @@
 # effectshop
 
-Real-time WebGL image effect studio. 100% client-side — no server round trip;
-all processing runs on the local GPU via Three.js post-processing.
+realtime WebGL image effect for Kinda official projects. 100% client-side —
+no server round trip; all processing runs on the local GPU via Three.js
+post-processing.
+
+## Design system
+
+The UI follows the Kinda Official site ([kindaofficial.xyz](https://kindaofficial.xyz))
+and lives in `src/index.css`.
+
+- **Tokens**:
+  - ink `#ededed`
+  - paper `#0b0b0b`
+  - dim `#7a7a7a`
+  - hairline `#242424`
+  - tile `#161616`
+
+  Tailwind's zinc scale is remapped onto them in `@theme`, so existing
+  `zinc-*` utilities land on the system. New code uses `text-ink`,
+  `bg-paper`, `border-hairline` and so on directly.
+- **Typeface**: Helvetica Neue everywhere. `--font-sans` and `--font-mono`
+  are the same stack.
+- **Corners**: square; every radius token is 0. Only true circles stay round.
+- **Type rules**, as `k-*` component classes:
+
+  | Class | Size / tracking | Colour | Used for |
+  | --- | --- | --- | --- |
+  | `wordmark` | bold, -0.01em | ink | the header name |
+  | `k-link` | 0.8rem / 0.08em | ink, dims on hover | header links, ending in ↗ |
+  | `k-nav` | 0.8rem / 0.08em | dim, ink when active | upper-case tabs with `<sup>` counts |
+  | `k-filter` | 0.68rem / 0.1em | dim, ink when active | upper-case filters and choices, active one underlined |
+  | `k-label` | 0.7rem / 0.08em | dim | upper-case section headings |
+  | `k-meta` | 0.72rem / 0.02em | dim labels, ink values | sentence-case field rows |
+
+- **Controls**: the only button is `k-btn`, a hairline box with ink text
+  whose line firms up on hover. Fields are `k-input`.
+- **Layout**:
+  - The site header: wordmark left, tagline centred, the sister sites
+    right.
+  - The left sidebar's tabs are the Kinda section nav.
+  - The Sandbox list is the Kinda index table: hairline rows, tabular
+    numbers, rows dim on hover.
+  - The vertical `© KINDA OFFICIAL — 2026` edge mark sits on the canvas
+    edge.
+
 
 ## Stack
 
@@ -23,11 +65,9 @@ all processing runs on the local GPU via Three.js post-processing.
 ## Effect Library & Presets thumbnails
 
 Both the left sidebar's Effects and Presets tabs show a 2-column grid
-of real rendered previews (`EffectLibrary.tsx`, `PresetList.tsx`), styled
-after effect.app's own library grid (square, rounded, name below) with a
-couple of details borrowed from ref-archive.site (hairline `border-white/10`
-instead of a flat gray border, opacity-based secondary text instead of a
-separate color token, a fade-in on image load). Each thumbnail is the
+of real rendered previews (`EffectLibrary.tsx`, `PresetList.tsx`), laid out
+like the works on kindaofficial.xyz: square tiles on the tile colour, with a
+small meta block below (the name in ink, its category in dim). Each thumbnail is the
 *actual* shader(s) rendered against a shared synthetic demo image
 (`src/effects/thumbnailDemo.ts` — a gradient-sky portrait silhouette with
 some noise/edges for every effect family to have something to grab onto,
@@ -627,14 +667,10 @@ flag any of these if you want a different behavior:
   isn't used — all effects are GPU-side WebGL work, which doesn't benefit
   from a Worker, and there's no CPU-heavy step (the originally-planned use
   case, Floyd-Steinberg, didn't end up being used per the note above).
-- **Typeface**: the UI references `"Helvetica Now Display"` by name (with
-  `Helvetica Neue` / `Helvetica` / `Arial` fallbacks) rather than embedding or
-  distributing font files, since it's a commercial Monotype font — it renders
-  correctly only on a machine where it's already installed/licensed, and
-  falls back cleanly everywhere else. Both the `--font-sans` and `--font-mono`
-  theme tokens point at it, because most of the visible UI (labels, buttons,
-  numeric readouts) uses the `font-mono` utility for its industrial/technical
-  feel — aliasing only `--font-sans` would have changed nothing on screen.
+- **Typeface**: Helvetica Neue (then Helvetica, Arial), the Kinda Official
+  stack, referenced by name rather than embedded. Both `--font-sans` and
+  `--font-mono` point at it, since much of the UI still carries `font-mono`
+  utilities from before the redesign.
 - **UI scale**: control heights, icon sizes, and type sizes were bumped up
   roughly one step across every panel (toolbar, sidebars, pipeline cards,
   parameter inputs) in response to feedback that the original UI ran too

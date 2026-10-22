@@ -1,4 +1,4 @@
-import { Pause, Play, Redo2, RotateCcw, SplitSquareHorizontal, Undo2, Upload, ZoomIn, ZoomOut } from 'lucide-react'
+import { Pause, Play, Redo2, RotateCcw, SplitSquareHorizontal, Undo2, ZoomIn, ZoomOut } from 'lucide-react'
 import { useRef } from 'react'
 import { useEffectStore } from '../../store/useEffectStore'
 import { loadImageFromFile, loadVideoFromFile, isImageFile, isVideoFile } from '../../lib/media'
@@ -22,10 +22,8 @@ function IconButton({
       title={title}
       onClick={onClick}
       disabled={disabled}
-      className={`flex h-8 w-8 items-center justify-center rounded border text-zinc-300 transition-colors disabled:cursor-not-allowed disabled:opacity-30 ${
-        active
-          ? 'border-zinc-500 bg-zinc-800 text-zinc-100'
-          : 'border-transparent hover:border-zinc-700 hover:bg-zinc-900'
+      className={`flex h-8 w-8 items-center justify-center border text-ink transition-colors disabled:cursor-not-allowed disabled:opacity-30 ${
+        active ? 'border-ink' : 'border-transparent hover:border-hairline'
       }`}
     >
       {children}
@@ -81,15 +79,10 @@ export function TopToolbar() {
   }
 
   return (
-    <div className="flex h-14 shrink-0 flex-wrap items-center justify-between gap-y-1 border-b border-zinc-800 bg-zinc-950 px-3 py-1.5">
+    <div className="flex h-14 shrink-0 flex-wrap items-center justify-between gap-y-1 border-b border-hairline bg-paper px-5 py-1.5">
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-1.5 rounded border border-zinc-800 px-3 py-1.5 font-mono text-sm uppercase tracking-wide text-zinc-300 hover:border-zinc-600 hover:bg-zinc-900"
-        >
-          <Upload size={14} />
-          {hasMedia ? 'Replace' : 'Upload'}
+        <button type="button" onClick={() => fileInputRef.current?.click()} className="k-btn">
+          {hasMedia ? 'REPLACE' : 'UPLOAD'} ↑
         </button>
         <input
           ref={fileInputRef}
@@ -99,7 +92,7 @@ export function TopToolbar() {
           onChange={(e) => handleUpload(e.target.files)}
         />
 
-        <div className="mx-1 h-6 w-px bg-zinc-800" />
+        <div className="mx-1 h-6 w-px bg-hairline" />
 
         <IconButton title="Undo" onClick={undo} disabled={!canUndo}>
           <Undo2 size={16} />
@@ -111,7 +104,7 @@ export function TopToolbar() {
           <RotateCcw size={16} />
         </IconButton>
 
-        <div className="mx-1 h-6 w-px bg-zinc-800" />
+        <div className="mx-1 h-6 w-px bg-hairline" />
 
         <IconButton title="Before / After split" onClick={toggleComparing} active={isComparing} disabled={!hasMedia}>
           <SplitSquareHorizontal size={16} />
@@ -119,7 +112,7 @@ export function TopToolbar() {
 
         {(mediaType === 'video' || mediaType === 'image') && duration > 0 && (
           <>
-            <div className="mx-1 h-6 w-px bg-zinc-800" />
+            <div className="mx-1 h-6 w-px bg-hairline" />
             <IconButton
               title={isPlaying ? 'Pause' : 'Play'}
               onClick={togglePlayback}
@@ -128,7 +121,7 @@ export function TopToolbar() {
             >
               {isPlaying ? <Pause size={16} /> : <Play size={16} />}
             </IconButton>
-            <span className="font-mono text-sm tabular-nums text-zinc-400">{formatTime(currentTime)}</span>
+            <span className="k-meta tabular-nums text-ink">{formatTime(currentTime)}</span>
             <input
               type="range"
               min={0}
@@ -139,10 +132,10 @@ export function TopToolbar() {
               disabled={isExporting}
               className="w-32 sm:w-48"
             />
-            <span className="font-mono text-sm tabular-nums text-zinc-600">{formatTime(duration)}</span>
+            <span className="k-meta tabular-nums text-dim">{formatTime(duration)}</span>
             {mediaType === 'image' && (
               <>
-                <span className="ml-1 font-mono text-xs text-zinc-600">Duration</span>
+                <span className="k-meta ml-1 text-dim">Duration</span>
                 <input
                   type="number"
                   min={0.5}
@@ -152,9 +145,9 @@ export function TopToolbar() {
                   onChange={(e) => setImageDuration(Number(e.target.value))}
                   disabled={isExporting || sequenceMode}
                   title={sequenceMode ? 'Set by the scenes in Sequence mode' : "Length of this image's synthetic clip, for keyframing and video export"}
-                  className="w-14 rounded border border-zinc-800 bg-zinc-950 px-1.5 py-1 text-right font-mono text-xs text-zinc-200 focus:border-zinc-600 focus:outline-none"
+                  className="k-input w-14 text-right"
                 />
-                <span className="font-mono text-xs text-zinc-600">s</span>
+                <span className="k-meta text-dim">s</span>
               </>
             )}
           </>
@@ -165,38 +158,18 @@ export function TopToolbar() {
         <IconButton title="Zoom out" onClick={() => setZoom(zoom / 1.25, 'custom')} disabled={!hasMedia}>
           <ZoomOut size={16} />
         </IconButton>
-        <button
-          type="button"
-          onClick={zoomTo100}
-          className="w-16 rounded border border-zinc-800 py-1.5 text-center font-mono text-sm text-zinc-300 hover:border-zinc-600"
-        >
-          {Math.round(zoom * 100)}%
-        </button>
+        <span className="k-meta w-12 text-center tabular-nums text-ink">{Math.round(zoom * 100)}%</span>
         <IconButton title="Zoom in" onClick={() => setZoom(zoom * 1.25, 'custom')} disabled={!hasMedia}>
           <ZoomIn size={16} />
         </IconButton>
-        <button
-          type="button"
-          onClick={zoomToFit}
-          className={`rounded border px-2.5 py-1.5 font-mono text-sm uppercase tracking-wide ${
-            zoomMode === 'fit'
-              ? 'border-zinc-500 bg-zinc-800 text-zinc-100'
-              : 'border-zinc-800 text-zinc-400 hover:border-zinc-600'
-          }`}
-        >
-          Fit
-        </button>
-        <button
-          type="button"
-          onClick={zoomTo100}
-          className={`rounded border px-2.5 py-1.5 font-mono text-sm uppercase tracking-wide ${
-            zoomMode === '100'
-              ? 'border-zinc-500 bg-zinc-800 text-zinc-100'
-              : 'border-zinc-800 text-zinc-400 hover:border-zinc-600'
-          }`}
-        >
-          100%
-        </button>
+        <div className="ml-2 flex gap-[14px]">
+          <button type="button" onClick={zoomToFit} className={`k-filter ${zoomMode === 'fit' ? 'is-active' : ''}`}>
+            FIT
+          </button>
+          <button type="button" onClick={zoomTo100} className={`k-filter ${zoomMode === '100' ? 'is-active' : ''}`}>
+            100%
+          </button>
+        </div>
       </div>
     </div>
   )

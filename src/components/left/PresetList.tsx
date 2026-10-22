@@ -28,7 +28,7 @@ function PresetThumbnailCard({ preset, disabled, onLoad }: { preset: Preset; dis
       title={!preset.implemented ? 'Coming soon' : disabled ? 'Upload an image or video first' : `Load ${preset.name}`}
       className="group flex flex-col gap-1.5 text-left disabled:cursor-not-allowed disabled:opacity-40"
     >
-      <div className="relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-zinc-900 transition-colors group-hover:border-white/25">
+      <div className="relative aspect-square overflow-hidden bg-tile transition-opacity group-hover:opacity-80">
         {thumbnail && (
           <img
             src={thumbnail}
@@ -38,12 +38,15 @@ function PresetThumbnailCard({ preset, disabled, onLoad }: { preset: Preset; dis
           />
         )}
         {!preset.implemented && (
-          <span className="absolute right-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide text-zinc-300">
+          <span className="k-filter absolute right-1.5 top-1.5 bg-paper/80 px-1.5 py-0.5">
             Soon
           </span>
         )}
       </div>
-      <span className="truncate px-0.5 font-mono text-xs text-zinc-100/70 group-hover:text-zinc-100/90">{preset.name}</span>
+      <span className="k-meta flex flex-col">
+        <span className="truncate text-ink">{preset.name}</span>
+        <span className="truncate text-dim">{preset.effects.length} effect{preset.effects.length === 1 ? '' : 's'}</span>
+      </span>
     </button>
   )
 }
@@ -54,8 +57,9 @@ export function PresetList() {
   const hasMedia = mediaType !== null
 
   return (
-    <div className="flex-1 overflow-y-auto p-3">
-      <div className="grid grid-cols-2 gap-3">
+    <div className="flex-1 overflow-y-auto px-5 py-4">
+      <h2 className="k-label mb-4">SELECTED LOOKS</h2>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-5">
         {PRESETS.map((preset) => (
           <PresetThumbnailCard
             key={preset.id}

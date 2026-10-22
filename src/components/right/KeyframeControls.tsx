@@ -29,7 +29,7 @@ export function KeyframeToggleButton({
         toggleKeyframeAtCurrentTime(instanceId, paramId, value)
       }}
       title={isOnKeyframe ? 'Remove keyframe at playhead' : 'Add keyframe at playhead'}
-      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded hover:bg-zinc-800 ${
+      className={`flex h-5 w-5 shrink-0 items-center justify-center hover:bg-tile ${
         isOnKeyframe ? 'text-amber-400' : track.length > 0 ? 'text-zinc-400' : 'text-zinc-600'
       }`}
     >

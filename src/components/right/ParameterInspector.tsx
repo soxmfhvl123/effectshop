@@ -1,4 +1,4 @@
-import { Plus, RefreshCw, Repeat, Shuffle, X } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import { useEffectStore } from '../../store/useEffectStore'
 import { getEffectDefinition } from '../../effects/registry'
 import { parsePalette, rotatePalette, shufflePalette } from '../../effects/sandbox/palettes'
@@ -21,17 +21,9 @@ function SeedControl({ effect, param }: { effect: AppliedEffect; param: EffectPa
   return (
     // Rapid clicks on "New variation" shouldn't count as the row's
     // double-click-to-reset.
-    <div className="flex items-stretch gap-1.5" onDoubleClick={(e) => e.stopPropagation()}>
-      <button
-        type="button"
-        onClick={reroll}
-        className="flex flex-1 items-center gap-2.5 rounded-lg bg-zinc-100 px-3 py-2 text-left text-zinc-900 transition-colors hover:bg-white"
-      >
-        <RefreshCw size={14} />
-        <span className="flex flex-col leading-tight">
-          <span className="font-mono text-xs uppercase tracking-[0.18em]">New variation</span>
-          <span className="font-mono text-[10px] text-zinc-500">Reshuffle every shape</span>
-        </span>
+    <div className="flex items-stretch gap-2" onDoubleClick={(e) => e.stopPropagation()}>
+      <button type="button" onClick={reroll} title="Reshuffle every shape" className="k-btn flex-1 justify-start py-2">
+        ↻ NEW VARIATION
       </button>
       <input
         type="number"
@@ -42,7 +34,7 @@ function SeedControl({ effect, param }: { effect: AppliedEffect; param: EffectPa
         title="Variation number"
         onClick={(e) => e.stopPropagation()}
         onChange={(e) => updateParameter(effect.instanceId, param.id, Math.round(Number(e.target.value)) || 0)}
-        className="w-16 rounded-lg border border-zinc-800 bg-zinc-950 px-1.5 text-center font-mono text-xs text-zinc-200 focus:border-zinc-600 focus:outline-none"
+        className="k-input w-16 text-center"
       />
     </div>
   )
@@ -56,7 +48,7 @@ function PaletteControl({ effect, param }: { effect: AppliedEffect; param: Effec
     (commit ? commitParameter : updateParameter)(effect.instanceId, param.id, next.join(','))
 
   return (
-    <div className="flex flex-col gap-2" onDoubleClick={(e) => e.stopPropagation()}>
+    <div className="flex flex-col gap-2.5" onDoubleClick={(e) => e.stopPropagation()}>
       <div className="flex flex-wrap items-center gap-1.5">
         {colors.map((c, i) => (
           <div key={i} className="group relative">
@@ -65,14 +57,14 @@ function PaletteControl({ effect, param }: { effect: AppliedEffect; param: Effec
               value={c}
               title={`Ink ${i + 1}`}
               onChange={(e) => save(colors.map((x, j) => (j === i ? e.target.value : x)), false)}
-              className="h-8 w-8 cursor-pointer rounded-md border border-zinc-700 bg-zinc-950 p-0.5"
+              className="h-7 w-7 cursor-pointer border border-hairline bg-transparent p-0.5"
             />
             {colors.length > 2 && (
               <button
                 type="button"
                 title="Remove ink"
                 onClick={() => save(colors.filter((_, j) => j !== i))}
-                className="absolute -right-1.5 -top-1.5 hidden h-4 w-4 items-center justify-center rounded-full bg-zinc-200 text-zinc-900 group-hover:flex"
+                className="absolute -right-1.5 -top-1.5 hidden h-4 w-4 items-center justify-center bg-ink text-paper group-hover:flex"
               >
                 <X size={10} />
               </button>
@@ -84,26 +76,18 @@ function PaletteControl({ effect, param }: { effect: AppliedEffect; param: Effec
             type="button"
             title="Add ink"
             onClick={() => save([...colors, colors[colors.length - 1]])}
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-dashed border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300"
+            className="flex h-7 w-7 items-center justify-center border border-dashed border-hairline text-dim hover:border-dim hover:text-ink"
           >
-            <Plus size={14} />
+            <Plus size={13} />
           </button>
         )}
       </div>
-      <div className="flex gap-1">
-        <button
-          type="button"
-          onClick={() => save(shufflePalette(colors.length, colors))}
-          className="flex items-center gap-1.5 rounded bg-zinc-900 px-2.5 py-1 font-mono text-xs uppercase tracking-wide text-zinc-300 hover:bg-zinc-800"
-        >
-          <Shuffle size={12} /> New colors
+      <div className="flex gap-2">
+        <button type="button" onClick={() => save(shufflePalette(colors.length, colors))} className="k-btn">
+          NEW COLORS
         </button>
-        <button
-          type="button"
-          onClick={() => save(rotatePalette(colors))}
-          className="flex items-center gap-1.5 rounded bg-zinc-900 px-2.5 py-1 font-mono text-xs uppercase tracking-wide text-zinc-300 hover:bg-zinc-800"
-        >
-          <Repeat size={12} /> Rotate
+        <button type="button" onClick={() => save(rotatePalette(colors))} className="k-btn">
+          ROTATE
         </button>
       </div>
     </div>
@@ -126,9 +110,10 @@ function ParamRow({ effect, param }: { effect: AppliedEffect; param: EffectParam
   const value = param.type === 'slider' ? getEffectiveValue(effect, param.id, currentTime, Number(rawValue)) : rawValue
 
   return (
-    <div className="flex flex-col gap-1" onDoubleClick={reset} title="Double-click to reset">
+    <div className="flex flex-col gap-1.5" onDoubleClick={reset} title="Double-click to reset">
+      {/* a meta row: the field's name dim, its value in ink */}
       <div className="flex items-center justify-between gap-1.5">
-        <span className="font-mono text-xs uppercase tracking-wide text-zinc-500">{param.name}</span>
+        <span className="k-meta text-dim">{param.name}</span>
         <div className="flex items-center gap-1">
           {param.type === 'slider' && (
             <input
@@ -138,7 +123,7 @@ function ParamRow({ effect, param }: { effect: AppliedEffect; param: EffectParam
               max={param.max}
               step={param.step}
               onChange={(e) => updateParameter(effect.instanceId, param.id, Number(e.target.value))}
-              className="w-20 rounded border border-zinc-800 bg-zinc-950 px-1.5 py-1 text-right font-mono text-xs text-zinc-200 focus:border-zinc-600 focus:outline-none"
+              className="k-input w-[4.5rem] text-right"
             />
           )}
           {canKeyframe && (
@@ -161,33 +146,35 @@ function ParamRow({ effect, param }: { effect: AppliedEffect; param: EffectParam
         />
       )}
 
+      {/* choices read as a Kinda filter row: the picked one in ink, underlined */}
       {param.type === 'select' && (
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-x-[14px] gap-y-1.5">
           {param.options?.map((opt) => (
             <button
               key={opt.value}
               type="button"
               onClick={() => updateParameter(effect.instanceId, param.id, opt.value)}
-              className={`rounded px-2.5 py-1 font-mono text-xs ${
-                value === opt.value ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-900 text-zinc-500 hover:bg-zinc-800'
-              }`}
+              className={`k-filter ${value === opt.value ? 'is-active' : ''}`}
             >
-              {opt.label}
+              {opt.label.toUpperCase()}
             </button>
           ))}
         </div>
       )}
 
       {param.type === 'toggle' && (
-        <button
-          type="button"
-          onClick={() => updateParameter(effect.instanceId, param.id, !value)}
-          className={`w-fit rounded px-2.5 py-1 font-mono text-xs uppercase tracking-wide ${
-            value ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-900 text-zinc-500'
-          }`}
-        >
-          {value ? 'On' : 'Off'}
-        </button>
+        <div className="flex gap-[14px]">
+          {[true, false].map((on) => (
+            <button
+              key={String(on)}
+              type="button"
+              onClick={() => updateParameter(effect.instanceId, param.id, on)}
+              className={`k-filter ${Boolean(value) === on ? 'is-active' : ''}`}
+            >
+              {on ? 'ON' : 'OFF'}
+            </button>
+          ))}
+        </div>
       )}
 
       {param.type === 'color' && (
@@ -195,7 +182,7 @@ function ParamRow({ effect, param }: { effect: AppliedEffect; param: EffectParam
           type="color"
           value={String(value)}
           onChange={(e) => updateParameter(effect.instanceId, param.id, e.target.value)}
-          className="h-7 w-14 rounded border border-zinc-800 bg-zinc-950"
+          className="h-7 w-14 border border-hairline bg-transparent p-0.5"
         />
       )}
 
@@ -205,7 +192,7 @@ function ParamRow({ effect, param }: { effect: AppliedEffect; param: EffectParam
           value={String(value)}
           onClick={(e) => e.stopPropagation()}
           onChange={(e) => updateParameter(effect.instanceId, param.id, e.target.value)}
-          className="w-full rounded border border-zinc-800 bg-zinc-950 px-2 py-1 font-mono text-xs text-zinc-200 focus:border-zinc-600 focus:outline-none"
+          className="k-input w-full"
         />
       )}
     </div>
@@ -219,13 +206,11 @@ export function ParameterInspector() {
   const def = effect ? getEffectDefinition(effect.effectId) : undefined
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col border-t border-zinc-800">
-      <p className="shrink-0 px-3 pt-2.5 font-mono text-xs uppercase tracking-widest text-zinc-600">
-        Parameters{def ? ` · ${def.name}` : ''}
-      </p>
-      <div className="flex-1 space-y-3 overflow-y-auto p-3">
+    <div className="flex min-h-0 flex-1 flex-col border-t border-hairline">
+      <h2 className="k-label shrink-0 px-5 pt-4">PARAMETERS{def ? ` · ${def.name.toUpperCase()}` : ''}</h2>
+      <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
         {!effect || !def ? (
-          <p className="pt-4 text-center font-mono text-sm text-zinc-600">Select an effect in the pipeline.</p>
+          <p className="k-meta pt-4 text-center text-dim">Select an effect in the pipeline.</p>
         ) : (
           def.parameters.map((param) => <ParamRow key={param.id} effect={effect} param={param} />)
         )}

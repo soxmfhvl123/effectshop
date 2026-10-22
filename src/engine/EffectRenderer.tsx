@@ -754,7 +754,7 @@ export const EffectRenderer = forwardRef<EffectRendererHandle, Props>(function E
   return (
     <div
       ref={outerRef}
-      className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[radial-gradient(circle,#27272a_1px,transparent_1px)] [background-size:16px_16px]"
+      className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[radial-gradient(circle,#242424_1px,transparent_1px)] [background-size:16px_16px]"
       onWheel={handleWheel}
       onDragOver={(e) => {
         e.preventDefault()
@@ -765,11 +765,9 @@ export const EffectRenderer = forwardRef<EffectRendererHandle, Props>(function E
     >
       {!hasMedia && (
         <div className="z-10 flex w-80 flex-col gap-3">
-          <label className="flex cursor-pointer flex-col items-center gap-3 rounded border border-dashed border-zinc-700 bg-zinc-950/80 px-8 py-12 text-center transition-colors hover:border-zinc-500">
-            <span className="font-sans text-sm uppercase tracking-widest text-zinc-400">
-              {isDragOver ? 'Drop to load' : 'Drop an image or video, or click to upload'}
-            </span>
-            <span className="text-xs text-zinc-600">PNG, JPG, WEBP · MP4, WEBM, MOV</span>
+          <label className="flex cursor-pointer flex-col items-center gap-3 border border-dashed border-hairline bg-paper px-8 py-12 text-center transition-colors hover:border-dim">
+            <span className="k-link">{isDragOver ? 'DROP TO LOAD' : 'DROP AN IMAGE OR VIDEO, OR CLICK TO UPLOAD ↑'}</span>
+            <span className="k-meta text-dim">PNG, JPG, WEBP · MP4, WEBM, MOV</span>
             <input
               type="file"
               accept="image/*,video/*"
@@ -777,16 +775,11 @@ export const EffectRenderer = forwardRef<EffectRendererHandle, Props>(function E
               onChange={(e) => handleFiles(e.target.files)}
             />
           </label>
-          <div className="flex flex-col items-center gap-2 rounded border border-zinc-800 bg-zinc-950/80 px-4 py-3">
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">Or start blank · frame</span>
-            <div className="flex flex-wrap justify-center gap-1">
+          <div className="flex flex-col items-center gap-3 border border-hairline bg-paper px-4 py-4">
+            <span className="k-label">OR START BLANK · FRAME</span>
+            <div className="flex flex-wrap justify-center gap-x-[14px] gap-y-2">
               {FRAME_RATIOS.map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={async () => setSourceImage(await createBlankImage(r))}
-                  className="rounded-full border border-zinc-800 px-2 py-0.5 font-mono text-[10px] tracking-wider text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
-                >
+                <button key={r} type="button" onClick={async () => setSourceImage(await createBlankImage(r))} className="k-filter tabular-nums">
                   {r}
                 </button>
               ))}
@@ -842,7 +835,7 @@ export const EffectRenderer = forwardRef<EffectRendererHandle, Props>(function E
             onPointerUp={handleDividerPointerUp}
           >
             <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-zinc-100/80" />
-            <div className="absolute left-1/2 top-1/2 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-400 bg-zinc-950 text-[10px] text-zinc-200">
+            <div className="absolute left-1/2 top-1/2 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-hairline bg-paper text-[10px] text-ink">
               ↔
             </div>
           </div>

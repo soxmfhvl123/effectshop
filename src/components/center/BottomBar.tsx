@@ -1,4 +1,3 @@
-import { Download, Film } from 'lucide-react'
 import { useState } from 'react'
 import { useEffectStore } from '../../store/useEffectStore'
 import type { EffectRendererHandle } from '../../engine/EffectRenderer'
@@ -14,29 +13,26 @@ export function BottomBar({ rendererRef, fps }: { rendererRef: React.RefObject<E
   const hasMedia = mediaType !== null
 
   return (
-    <div className="flex h-10 shrink-0 items-center justify-between border-t border-zinc-800 bg-zinc-950 px-3 font-mono text-sm text-zinc-500">
-      <div className="flex items-center gap-4">
-        <span>{hasMedia ? `${imageWidth} × ${imageHeight}` : '— × —'}</span>
-        <span className={fps > 0 && fps < 30 ? 'text-amber-500' : ''}>{hasMedia ? `${fps} FPS` : '—'}</span>
-        {isExporting && (
-          <span className="text-zinc-300">Recording… {Math.round(exportProgress * 100)}%</span>
-        )}
-      </div>
+    <div className="flex h-11 shrink-0 items-center justify-between border-t border-hairline bg-paper px-5">
+      <dl className="k-meta flex items-center gap-4 tabular-nums">
+        <span className="flex gap-2">
+          <dt className="text-dim">Size</dt>
+          <dd className="text-ink">{hasMedia ? `${imageWidth} × ${imageHeight}` : '—'}</dd>
+        </span>
+        <span className="flex gap-2">
+          <dt className="text-dim">Fps</dt>
+          <dd className={fps > 0 && fps < 30 ? 'text-amber-500' : 'text-ink'}>{hasMedia ? fps : '—'}</dd>
+        </span>
+        {isExporting && <span className="text-ink">Recording… {Math.round(exportProgress * 100)}%</span>}
+      </dl>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-2">
         {mediaType === 'image' && (
           <>
-            <div className="flex overflow-hidden rounded border border-zinc-800">
+            <div className="mr-1 flex gap-[14px]">
               {(['png', 'jpg'] as const).map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => setFormat(f)}
-                  className={`px-2 py-1 uppercase tracking-wide ${
-                    format === f ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:bg-zinc-900'
-                  }`}
-                >
-                  {f}
+                <button key={f} type="button" onClick={() => setFormat(f)} className={`k-filter ${format === f ? 'is-active' : ''}`}>
+                  {f.toUpperCase()}
                 </button>
               ))}
             </div>
@@ -44,12 +40,10 @@ export function BottomBar({ rendererRef, fps }: { rendererRef: React.RefObject<E
               type="button"
               disabled={!hasMedia || isExporting}
               onClick={() => rendererRef.current?.exportImage(format)}
-              className="flex items-center gap-1.5 rounded border border-zinc-700 bg-zinc-100 px-2.5 py-1 uppercase tracking-wide text-zinc-900 hover:bg-white disabled:cursor-not-allowed disabled:opacity-30"
+              className="k-btn"
             >
-              <Download size={13} />
-              Export Image
+              EXPORT IMAGE ↓
             </button>
-            <div className="mx-1 h-5 w-px bg-zinc-800" />
           </>
         )}
 
@@ -59,10 +53,9 @@ export function BottomBar({ rendererRef, fps }: { rendererRef: React.RefObject<E
             disabled={!hasMedia || isExporting}
             onClick={() => rendererRef.current?.exportVideo()}
             title={mediaType === 'image' ? "Records this image's keyframed animation over its Duration" : undefined}
-            className="flex items-center gap-1.5 rounded border border-zinc-700 bg-zinc-100 px-2.5 py-1 uppercase tracking-wide text-zinc-900 hover:bg-white disabled:cursor-not-allowed disabled:opacity-30"
+            className="k-btn"
           >
-            <Film size={13} />
-            {isExporting ? 'Recording…' : 'Export Video'}
+            {isExporting ? 'RECORDING…' : 'EXPORT VIDEO ↓'}
           </button>
         )}
       </div>

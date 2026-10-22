@@ -1,15 +1,45 @@
 @import "tailwindcss";
 
+/* ------------------------------------------------------------------------
+   Kinda Official design system (kindaofficial.xyz), adopted wholesale:
+   five colour tokens, Helvetica Neue throughout, hairline rules, square
+   corners, and a handful of type rules (k-* classes below).
+   ------------------------------------------------------------------------ */
 @theme {
-  /* "Helvetica Now Display" is a commercial Monotype font -- referenced here by
-     name (relying on the user's own system-installed license) rather than
-     embedded/distributed, with metric-compatible fallbacks for machines that
-     don't have it installed. Both tokens point at it: most of the UI's visible
-     type uses font-mono for its "industrial/technical" feel (labels, numeric
-     readouts), so aliasing font-mono too is what actually changes what's on
-     screen, not just the otherwise-unused font-sans body default. */
-  --font-mono: "Helvetica Now Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-sans: "Helvetica Now Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  /* The UI's many font-mono utilities predate the system; pointing them at
+     the same face keeps one typeface everywhere. */
+  --font-mono: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --color-ink: #ededed;
+  --color-paper: #0b0b0b;
+  --color-dim: #7a7a7a;
+  --color-hairline: #242424;
+  --color-tile: #161616;
+
+  /* The zinc scale is remapped onto those tokens, so every existing
+     zinc-* utility lands on the system without touching it. */
+  --color-zinc-50: #ededed;
+  --color-zinc-100: #ededed;
+  --color-zinc-200: #ededed;
+  --color-zinc-300: #c9c9c9;
+  --color-zinc-400: #a3a3a3;
+  --color-zinc-500: #7a7a7a;
+  --color-zinc-600: #7a7a7a;
+  --color-zinc-700: #333333;
+  --color-zinc-800: #242424;
+  --color-zinc-900: #161616;
+  --color-zinc-950: #0b0b0b;
+
+  /* square corners everywhere (rounded-full is left for true circles) */
+  --radius: 0;
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
 }
 
 html, body, #root {
@@ -17,61 +47,205 @@ html, body, #root {
 }
 
 body {
-  background-color: #09090b;
-  color: #f4f4f5;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
 }
 
-/* thin industrial scrollbars */
+input, select, button, textarea {
+  font-family: inherit;
+}
+
+input[type="number"] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- type rules ---------------------------------------------------------
+   wordmark   bold, tight            EFFECTSHOP
+   k-link     0.8rem / 0.08em, ink   kindaofficial ↗
+   k-nav      0.8rem / 0.08em, dim   EFFECTS  SANDBOX  PRESETS (active: ink)
+   k-filter   0.68rem / 0.1em, dim   ALL  GLITCH ... (active: ink, underlined)
+   k-label    0.7rem / 0.08em, dim   section headings, upper case as written
+   k-meta     0.72rem / 0.02em       field labels (dim) and values (ink),
+                                     sentence case
+   counts sit in <sup> after nav/filter labels; links end in ↗.
+   ------------------------------------------------------------------------ */
+@layer components {
+  .wordmark {
+    font-weight: 700;
+    font-size: clamp(1.05rem, 1.6vw, 1.35rem);
+    letter-spacing: -0.01em;
+    color: var(--color-ink);
+    white-space: nowrap;
+    text-decoration: none;
+  }
+
+  .k-link {
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    color: var(--color-ink);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+  }
+  .k-link:hover {
+    opacity: 0.5;
+  }
+
+  .k-nav {
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    color: var(--color-dim);
+    white-space: nowrap;
+    transition: color 0.2s;
+  }
+  .k-nav:hover,
+  .k-nav.is-active {
+    color: var(--color-ink);
+  }
+  .k-nav sup {
+    font-size: 0.6em;
+    margin-left: 2px;
+  }
+
+  .k-filter {
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    color: var(--color-dim);
+    white-space: nowrap;
+    text-underline-offset: 4px;
+    transition: color 0.2s;
+  }
+  .k-filter:hover,
+  .k-filter.is-active {
+    color: var(--color-ink);
+  }
+  .k-filter.is-active {
+    text-decoration: underline;
+  }
+  .k-filter sup {
+    font-size: 0.75em;
+    margin-left: 2px;
+  }
+  .k-filter:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .k-label {
+    font-size: 0.7rem;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    color: var(--color-dim);
+  }
+
+  .k-meta {
+    font-size: 0.72rem;
+    line-height: 1.55;
+    letter-spacing: 0.02em;
+  }
+
+  /* the one button: a hairline box, ink text; hover firms the line up */
+  .k-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid var(--color-hairline);
+    background: transparent;
+    color: var(--color-ink);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    padding: 6px 10px;
+    white-space: nowrap;
+    transition: border-color 0.2s, opacity 0.2s;
+  }
+  .k-btn:hover:not(:disabled) {
+    border-color: var(--color-ink);
+  }
+  .k-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .k-btn.is-active {
+    border-color: var(--color-ink);
+  }
+
+  .k-input {
+    background: transparent;
+    border: 1px solid var(--color-hairline);
+    color: var(--color-ink);
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+    padding: 4px 6px;
+  }
+  .k-input:focus {
+    outline: none;
+    border-color: var(--color-dim);
+  }
+  .k-input::placeholder {
+    color: var(--color-dim);
+  }
+
+  /* fixed vertical credit on the right edge, inverted over whatever is behind */
+  .edge-mark {
+    writing-mode: vertical-rl;
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    color: #fff;
+    mix-blend-mode: difference;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+}
+
+/* thin scrollbars on the hairline */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #3f3f46 transparent;
+  scrollbar-color: #333333 transparent;
 }
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 *::-webkit-scrollbar-thumb {
-  background-color: #3f3f46;
-  border-radius: 4px;
+  background-color: #333333;
 }
 *::-webkit-scrollbar-track {
   background: transparent;
 }
 
+/* sliders: a hairline track and a small square ink thumb */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
 }
 input[type="range"]::-webkit-slider-runnable-track {
-  height: 4px;
-  background: #3f3f46;
-  border-radius: 2px;
+  height: 1px;
+  background: #3a3a3a;
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  margin-top: -6px;
-  width: 16px;
-  height: 16px;
-  border-radius: 2px;
-  background: #f4f4f5;
-  border: 1px solid #18181b;
+  margin-top: -5px;
+  width: 11px;
+  height: 11px;
+  background: var(--color-ink);
+  border: none;
   cursor: pointer;
 }
 input[type="range"]::-moz-range-track {
-  height: 4px;
-  background: #3f3f46;
-  border-radius: 2px;
+  height: 1px;
+  background: #3a3a3a;
 }
 input[type="range"]::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 2px;
-  background: #f4f4f5;
-  border: 1px solid #18181b;
+  width: 11px;
+  height: 11px;
+  border-radius: 0;
+  background: var(--color-ink);
+  border: none;
   cursor: pointer;
 }

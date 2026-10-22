@@ -34,8 +34,8 @@ export function EffectCard({ effect }: { effect: AppliedEffect }) {
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       onClick={() => selectInstance(effect.instanceId)}
-      className={`rounded border bg-zinc-950 px-2 py-2 transition-colors ${
-        isSelected ? 'border-zinc-500' : 'border-zinc-800 hover:border-zinc-700'
+      className={`border bg-paper px-2.5 py-2.5 transition-colors ${
+        isSelected ? 'border-ink' : 'border-hairline hover:border-zinc-700'
       } ${isDragging ? 'z-10 opacity-70' : ''} ${!effect.enabled ? 'opacity-50' : ''}`}
     >
       <div className="flex items-center gap-1.5">
@@ -43,12 +43,12 @@ export function EffectCard({ effect }: { effect: AppliedEffect }) {
           type="button"
           {...attributes}
           {...listeners}
-          className="cursor-grab touch-none text-zinc-600 hover:text-zinc-300 active:cursor-grabbing"
+          className="cursor-grab touch-none text-dim hover:text-ink active:cursor-grabbing"
           title="Drag to reorder"
         >
           <GripVertical size={16} />
         </button>
-        <span className="flex-1 truncate font-mono text-sm font-medium text-zinc-100">{effect.name}</span>
+        <span className="flex-1 truncate text-[0.85rem] text-ink">{effect.name}</span>
         <button
           type="button"
           onClick={(e) => {
@@ -74,7 +74,7 @@ export function EffectCard({ effect }: { effect: AppliedEffect }) {
       </div>
 
       <div className="mt-1.5 flex items-center gap-2 pl-[22px]">
-        <span className="w-12 font-mono text-[10px] uppercase tracking-wide text-zinc-600">Opacity</span>
+        <span className="k-meta w-12 text-dim">Opacity</span>
         <input
           type="range"
           min={0}
@@ -85,7 +85,7 @@ export function EffectCard({ effect }: { effect: AppliedEffect }) {
           onChange={(e) => setEffectOpacity(effect.instanceId, Number(e.target.value))}
           className="flex-1"
         />
-        <span className="w-8 text-right font-mono text-xs text-zinc-500">{Math.round(displayedOpacity * 100)}</span>
+        <span className="k-meta w-8 text-right text-dim tabular-nums">{Math.round(displayedOpacity * 100)}</span>
         {duration > 0 && (
           <KeyframeToggleButton instanceId={effect.instanceId} paramId="opacity" value={displayedOpacity} track={opacityTrack} />
         )}
@@ -93,7 +93,7 @@ export function EffectCard({ effect }: { effect: AppliedEffect }) {
 
       {isScene && (
         <div className="mt-1.5 flex items-center gap-2 pl-[22px]" onClick={(e) => e.stopPropagation()}>
-          <span className="w-12 font-mono text-[10px] uppercase tracking-wide text-zinc-600">Scene</span>
+          <span className="k-meta w-12 text-dim">Scene</span>
           <input
             type="number"
             min={0.5}
@@ -102,14 +102,14 @@ export function EffectCard({ effect }: { effect: AppliedEffect }) {
             value={clip.duration}
             title="How long this scene plays"
             onChange={(e) => setClip(effect.instanceId, { duration: Math.min(60, Math.max(0.5, Number(e.target.value) || 0.5)) })}
-            className="w-14 rounded border border-zinc-800 bg-zinc-950 px-1 py-0.5 text-right font-mono text-xs text-zinc-200 focus:border-zinc-600 focus:outline-none"
+            className="k-input w-14 py-0.5 text-right"
           />
-          <span className="font-mono text-[10px] text-zinc-600">s →</span>
+          <span className="k-meta text-dim">s →</span>
           <select
             value={clip.transition}
             title="How this scene hands over to the next one"
             onChange={(e) => setClip(effect.instanceId, { transition: e.target.value as SceneTransition }, true)}
-            className="flex-1 rounded border border-zinc-800 bg-zinc-950 px-1 py-0.5 font-mono text-xs text-zinc-200 focus:border-zinc-600 focus:outline-none"
+            className="k-input flex-1 bg-paper py-0.5"
           >
             {SCENE_TRANSITIONS.map((t) => (
               <option key={t.value} value={t.value}>
@@ -120,7 +120,7 @@ export function EffectCard({ effect }: { effect: AppliedEffect }) {
         </div>
       )}
       {sequenceMode && !isSceneEffect(effect) && effect.enabled && (
-        <p className="mt-1 pl-[22px] font-mono text-[10px] uppercase tracking-wide text-zinc-600">Filter · over every scene</p>
+        <p className="k-meta mt-1 pl-[22px] text-dim">Filter · over every scene</p>
       )}
     </div>
   )

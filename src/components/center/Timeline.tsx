@@ -102,7 +102,7 @@ export function Timeline() {
   for (let t = 0; t <= duration + 0.001; t += tickStep) ticks.push(t)
 
   return (
-    <div className="flex max-h-56 shrink-0 flex-col border-t border-zinc-800 bg-zinc-950">
+    <div className="flex max-h-56 shrink-0 flex-col border-t border-hairline bg-paper">
       <div className="relative" ref={scrubAreaRef}>
         <div
           className="relative h-6 shrink-0 cursor-pointer select-none border-b border-zinc-800"
@@ -132,7 +132,7 @@ export function Timeline() {
                   seek(sc.start)
                 }}
                 title={`${sc.name} · ${(sc.end - sc.start).toFixed(1)}s`}
-                className={`absolute top-1 bottom-1 overflow-hidden rounded-sm border px-1.5 text-left font-mono text-[10px] uppercase tracking-wider ${
+                className={`absolute top-1 bottom-1 overflow-hidden border px-1.5 text-left text-[10px] tracking-[0.08em] ${
                   selectedInstanceId === sc.instanceId ? 'border-zinc-200 text-zinc-100' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'
                 }`}
                 style={{ left: pct(sc.start), width: pct(sc.end - sc.start), backgroundColor: `${TRACK_COLORS[i % TRACK_COLORS.length]}22` }}
@@ -158,7 +158,7 @@ export function Timeline() {
 
         <div className="max-h-40 overflow-y-auto">
           {tracks.length === 0 && sequenceMode ? null : tracks.length === 0 ? (
-            <p className="px-3 py-4 text-center font-mono text-xs text-zinc-600">
+            <p className="k-meta px-3 py-4 text-center text-dim">
               No keyframes yet — click the diamond next to a parameter or Opacity to start animating it.
             </p>
           ) : (
@@ -173,7 +173,7 @@ export function Timeline() {
                   type="button"
                   onClick={() => selectInstance(track.instanceId)}
                   title={`${track.effectName} · ${track.paramLabel}`}
-                  className="flex w-40 shrink-0 items-center gap-1.5 truncate px-2 text-left font-mono text-[11px] text-zinc-400 hover:text-zinc-200"
+                  className="k-meta flex w-40 shrink-0 items-center gap-1.5 truncate px-2 text-left text-dim hover:text-ink"
                 >
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: track.color }} />
                   <span className="truncate">

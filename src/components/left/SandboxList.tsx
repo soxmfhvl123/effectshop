@@ -1,4 +1,3 @@
-import { Dices, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { SANDBOX_KINDS, SANDBOX_TOOLS } from '../../effects/sandbox'
 import type { SandboxKind, SandboxTool } from '../../effects/sandbox/types'
@@ -21,24 +20,27 @@ function useStaggeredThumbnail(effectId: string, index: number): string | null {
   return url
 }
 
+// A row of the Kinda index table: thumbnail, number, name, what it makes.
 function ToolRow({ tool, index, onAdd }: { tool: SandboxTool; index: number; onAdd: () => void }) {
   const thumb = useStaggeredThumbnail(tool.id, index)
   return (
-    <button
-      type="button"
-      onClick={onAdd}
-      title={`Add ${tool.name}`}
-      className="group grid w-full grid-cols-[2.75rem_1.75rem_1fr] items-center gap-3 border-b border-zinc-800/70 px-3 py-2 text-left transition-colors hover:bg-zinc-900"
-    >
-      <span className="block aspect-square w-11 overflow-hidden rounded-md border border-white/10 bg-zinc-900">
-        {thumb && <img src={thumb} alt="" className="h-full w-full object-cover" />}
-      </span>
-      <span className="font-mono text-[11px] text-zinc-600">{pad(tool.no)}</span>
-      <span className="flex min-w-0 flex-col">
-        <span className="truncate font-mono text-sm uppercase tracking-[0.2em] text-zinc-200 group-hover:text-white">{tool.name}</span>
-        <span className="truncate font-mono text-[11px] text-zinc-500">{tool.makes}</span>
-      </span>
-    </button>
+    <li className="border-b border-hairline">
+      <button
+        type="button"
+        onClick={onAdd}
+        title={`Add ${tool.name}`}
+        className="grid w-full grid-cols-[2.5rem_1.75rem_1fr] items-center gap-3 py-2.5 text-left transition-opacity hover:opacity-45"
+      >
+        <span className="block aspect-square w-10 overflow-hidden bg-tile">
+          {thumb && <img src={thumb} alt="" className="h-full w-full object-cover" />}
+        </span>
+        <span className="k-meta text-dim tabular-nums">{pad(tool.no)}</span>
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate text-[0.95rem] text-ink">{tool.name}</span>
+          <span className="k-meta truncate text-dim">{tool.makes}</span>
+        </span>
+      </button>
+    </li>
   )
 }
 
@@ -88,16 +90,15 @@ export function SandboxList() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="space-y-3 border-b border-zinc-800 p-3">
-        <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5 font-mono text-[10px] uppercase tracking-[0.2em]">
-          <span className="text-zinc-600">Tools</span>
-          <span className="text-zinc-300">{pad(SANDBOX_TOOLS.length)}</span>
-          <span className="text-zinc-600">Kinds</span>
-          <span className="text-zinc-300">{pad(SANDBOX_KINDS.length)}</span>
-        </div>
+      <div className="space-y-4 border-b border-hairline px-5 py-4">
+        <dl className="k-meta grid grid-cols-[90px_1fr]">
+          <dt className="text-dim">Tools</dt>
+          <dd className="text-ink tabular-nums">{pad(SANDBOX_TOOLS.length)}</dd>
+          <dt className="text-dim">Kinds</dt>
+          <dd className="text-ink tabular-nums">{pad(SANDBOX_KINDS.length)}</dd>
+        </dl>
 
-        <div className="flex items-center gap-1.5 rounded-full border border-zinc-700 py-1 pl-3 pr-1">
-          <Search size={13} className="shrink-0 text-zinc-600" />
+        <div className="flex items-stretch gap-2">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -105,47 +106,33 @@ export function SandboxList() {
               if (e.key === 'Enter' && visible[0]) add(visible[0])
               if (e.key === 'Escape') setQuery('')
             }}
-            placeholder="FILTER · ALL TOOLS"
-            className="min-w-0 flex-1 bg-transparent font-mono text-xs uppercase tracking-[0.15em] text-zinc-200 placeholder:text-zinc-600 focus:outline-none"
+            placeholder="Filter all tools"
+            className="k-input min-w-0 flex-1"
           />
-          <button
-            type="button"
-            onClick={addRandom}
-            title="Add a random tool"
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-900 hover:bg-white"
-          >
-            <Dices size={12} /> Random
+          <button type="button" onClick={addRandom} title="Add a random tool" className="k-btn">
+            RANDOM
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-x-[18px] gap-y-2">
           {(['All', ...SANDBOX_KINDS] as const).map((k) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => setKind(k)}
-              className={`flex items-center gap-1.5 rounded px-2 py-1 font-mono text-[10px] uppercase tracking-[0.15em] transition-colors ${
-                kind === k ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-900 text-zinc-500 hover:bg-zinc-800'
-              }`}
-            >
-              {k === 'All' ? 'All Tools' : k}
-              <span className={kind === k ? 'text-zinc-500' : 'text-zinc-600'}>{pad(counts[k] ?? 0)}</span>
+            <button key={k} type="button" onClick={() => setKind(k)} className={`k-filter ${kind === k ? 'is-active' : ''}`}>
+              {k.toUpperCase()}
+              <sup>{counts[k] ?? 0}</sup>
             </button>
           ))}
         </div>
 
-        <div className="space-y-1.5">
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">Blank canvas · frame</span>
-          <div className="flex flex-wrap gap-1">
+        <div className="space-y-2">
+          <h3 className="k-label">BLANK CANVAS · FRAME</h3>
+          <div className="flex flex-wrap gap-x-[14px] gap-y-2">
             {FRAME_RATIOS.map((r) => (
               <button
                 key={r}
                 type="button"
                 onClick={() => startBlank(r)}
                 title={`New blank ${r} canvas`}
-                className={`rounded-full border px-2 py-0.5 font-mono text-[10px] tracking-wider transition-colors ${
-                  ratio === r ? 'border-zinc-300 text-zinc-100' : 'border-zinc-800 text-zinc-500 hover:border-zinc-600'
-                }`}
+                className={`k-filter tabular-nums ${ratio === r ? 'is-active' : ''}`}
               >
                 {r}
               </button>
@@ -154,29 +141,26 @@ export function SandboxList() {
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center justify-between gap-2 whitespace-nowrap border-b border-zinc-800 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-600">
-        <span>No. · Tool · makes</span>
-        <span className="flex gap-2">
-          {(['asc', 'desc', 'az'] as const).map((o) => (
-            <button
-              key={o}
-              type="button"
-              onClick={() => setOrder(o)}
-              className={order === o ? 'text-zinc-200' : 'text-zinc-600 hover:text-zinc-400'}
-            >
-              {o === 'az' ? 'A–Z' : o === 'asc' ? `01→${pad(SANDBOX_TOOLS.length)}` : `${pad(SANDBOX_TOOLS.length)}→01`}
-            </button>
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-4">
+        {/* the Kinda index head: column names left, ordering right */}
+        <div className="flex items-baseline justify-between gap-2 pb-2.5 text-[0.66rem] tracking-[0.1em] text-dim">
+          <span>NO. · TOOL · MAKES</span>
+          <span className="flex gap-3">
+            {(['asc', 'desc', 'az'] as const).map((o) => (
+              <button key={o} type="button" onClick={() => setOrder(o)} className={`k-filter ${order === o ? 'is-active' : ''}`}>
+                {o === 'az' ? 'A–Z' : o === 'asc' ? `01→${pad(SANDBOX_TOOLS.length)}` : `${pad(SANDBOX_TOOLS.length)}→01`}
+              </button>
+            ))}
+          </span>
+        </div>
+        {visible.length === 0 && <p className="k-label pt-8 text-center">NO MATCH</p>}
+        <ul className="border-t border-hairline">
+          {visible.map((tool, i) => (
+            <ToolRow key={tool.id} tool={tool} index={i} onAdd={() => add(tool)} />
           ))}
-        </span>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {visible.length === 0 && <p className="pt-8 text-center font-mono text-xs uppercase tracking-widest text-zinc-600">No match</p>}
-        {visible.map((tool, i) => (
-          <ToolRow key={tool.id} tool={tool} index={i} onAdd={() => add(tool)} />
-        ))}
-        <p className="px-3 py-3 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-700">
-          Showing {pad(visible.length)} / {pad(SANDBOX_TOOLS.length)} · Enter — add first · Esc — clear
+        </ul>
+        <p className="k-label py-4">
+          SHOWING {pad(visible.length)} / {pad(SANDBOX_TOOLS.length)} · ENTER — ADD FIRST · ESC — CLEAR
         </p>
       </div>
     </div>
